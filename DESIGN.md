@@ -1,115 +1,198 @@
-# CS50 Nuggets
-## Design Spec
-### Team name, term, year
+# CS50 Nuggets – Design Specification 
+**TGMBO shark – Spring 2025**
 
-> This **template** includes some gray text meant to explain how to use the template; delete all of them in your document!
+---
 
-According to the [Requirements Spec](REQUIREMENTS.md), the Nuggets game requires two standalone programs: a client and a server.
-Our design also includes x, y, z modules.
-We describe each program and module separately.
-We do not describe the `support` library nor the modules that enable features that go beyond the spec.
-We avoid repeating information that is provided in the requirements spec.
+## Overview
 
-## Player
+This project implements a multiplayer terminal-based game using client-server architecture. The system supports player and spectator modes, dynamically updates game state, and handles player interaction and gold collection across a shared game map.
 
-> Teams of 3 students should delete this section.
+---
 
-The *client* acts in one of two modes:
+## Modules
 
- 1. *spectator*, the passive spectator mode described in the requirements spec.
- 2. *player*, the interactive game-playing mode described in the requirements spec.
+### `server`
+- Main entry point for game logic and state.
+- Accepts client connections, maintains the game loop, and coordinates player movement, visibility, and gold collection.
+- maintain an overall table of indivudual players and gold count to display at end of game
 
-### User interface
+### `client`
+- Provides an interactive interface using `ncurses`.
+- Operates in two modes: 
+  - **Player Mode**: Accepts keyboard inputs and displays real-time updates. 
+  - **Spectator Mode**: View-only display of game progress and how many nuggets
 
-See the requirements spec for both the command-line and interactive UI.
+### `map`
+- Loads and represents the game environment from a text file.
+- Validates input and stores the layout as a 2D grid.
 
-> You may not need much more.
+### `serverCommunicator`
+- Handles communicator setup, sending/receiving messages between client and server.
+- Sends `OK` `GRID` `GOLD` `KEY` messages to clientCommunicator
 
-### Inputs and outputs
+### `clientCommunicator`
+- Processes and formats incoming and outgoing messages.
+- Implements parsing and routing for commands like `PLAY`, `SPECTATE`, `KEY`, `QUIT`.
+- Receives messages from serverCommunicator and parses them
 
-> Briefly describe the inputs (keystrokes) and outputs (display).
-> If you write to log files, or log to stderr, describe that here.
-> Command-line arguments are not 'input'.
+### `log`
+- Provides helper functions for logging, error handling, and memory management (given)
 
-### Functional decomposition into modules
+### `padmap (Given)`
+- A took to pad all lines of a mapfile so they have same length. 
 
-> List and briefly describe any modules that comprise your client, other than the main module.
- 
-### Pseudo code for logic/algorithmic flow
-
-> For each function write pseudocode indented by a tab, which in Markdown will cause it to be rendered in literal form (like a code block).
-> Much easier than writing as a bulleted list!
-> See the Server section for an example.
-
-> Then briefly describe each of the major functions, perhaps with level-4 #### headers.
-
-### Major data structures
-
-> A language-independent description of the major data structure(s) in this program.
-> Mention, but do not describe, any libcs50 data structures you plan to use.
+### `checkmap(given)`
+- A tool to validate whether a mapfile is 'valid'
 
 ---
 
 ## Server
-### User interface
 
-See the requirements spec for the command-line interface.
-There is no interaction with the user.
+### Interface
+The server runs as a background process. It takes in command-line arguments and communicates with clients. It prints its port to `stdout`, and logs errors to `stderr`.
 
-> You may not need much more.
+### Inputs
+- **Command-line**: 
+  - Required: Map file 
+  - Optional: Random seed 
+- **Client messages** over:
+  - `PLAY`, `SPECTATE`, `KEY`, `QUIT`
 
-### Inputs and outputs
-
-> Briefly describe the inputs (map file) and outputs (to terminal).
-> If you write to log files, or log to stderr, describe that here.
-> Command-line arguments are not 'input'.
-
-### Functional decomposition into modules
-
-> List and briefly describe any modules that comprise your server, other than the main module.
-
-### Pseudo code for logic/algorithmic flow
-
-> For each function write pseudocode indented by a tab, which in Markdown will cause it to be rendered in literal form (like a code block).
-> Much easier than writing as a bulleted list!
-> For example:
-
-The server will run as follows:
-
-	execute from a command line per the requirement spec
-	parse the command line, validate parameters
-	call initializeGame() to set up data structures
-	initialize the 'message' module
-	print the port number on which we wait
-	call message_loop(), to await clients
-	call gameOver() to inform all clients the game has ended
-	clean up
+### Outputs
+- Port number printed to `stdout`
+- Errors/events logged to `stderr`
+- **Mesages to Clients**:
+    -Grid, Display, Quit, and erros
 
 
-> Then briefly describe each of the major functions, perhaps with level-4 #### headers.
-
-### Major data structures
-
-> Describe each major data structure in this program: what information does it represent, how does it represent the data, and what are its members.
-> This description should be independent of the programming language.
-> Mention, but do not describe, data structures implemented by other modules (such as the new modules you detail below, or any libcs50 data structures you plan to use).
+### Logic (Pseudocode)
+```pseudo
+initialize logging
+validate command-line arguments
+set random seed (from arg or PID)
+load map from file
+initialize game state
+start message handler module
+print port to stdout
+while game is running:
+    handle incoming messages
+on shutdown:
+    clean up game, map, and modules
+```
 
 ---
 
-## XYZ module
+## Client
 
-> Repeat this section for each module that is included in either the client or server.
+### Interface
+Uses `ncurses` to display the game grid, player status, and messages. 
+In **player mode**, responds to keyboard inputs. 
+In **spectator mode**, shows the game without interaction.
 
-### Functional decomposition
+### Inputs
+- Keyboard keys:
+  - Movement: `h`, `j`, `k`, `l`, `y`, `u`, `b`, `n`
+  - Quit: `q`
+  - port and optional playername (if no playername given they are spectator)
 
-> List each of the main functions implemented by this module, with a phrase or sentence description of each.
+### Outputs
+- Game state displayed in terminal
+- Messages sent to server for movement and quitting
+- Terminal display
 
-### Pseudo code for logic/algorithmic flow
+### Logic (Pseudocode)
+```pseudo
+if server is unreachable:
+    show error and exit
+get user keystroke
+if movement key:
+    send KEY message
+if 'q':
+    send QUIT message and clean up
+```
 
-> For any non-trivial function, add a level-4 #### header and provide tab-indented pseudocode.
-> This pseudocode should be independent of the programming language.
+---
 
-### Major data structures
+## Functional Decomposition
 
-> Describe each major data structure in this module: what information does it represent, how does it represent the data, and what are its members.
-> This description should be independent of the programming language.
+### Client Modules
+1. **Message Handling** – Formats/sends messages to the server
+2. **Display** – Handles `ncurses` window rendering and updates
+3. **Input Handling** – Maps keystrokes to actions
+4. **Server Message Processing** – Receives and reacts to updates from the server
+
+### Server Modules
+- **`handle_message()`** – Dispatches incoming commands
+- **`game.c`** – Maintains game state and logic
+- **`map.c`** – Manages map loading
+- **`visibility.c`** – Controls player field of view
+
+## Major Data Structures
+### Server Side
+`Game` Structure
+- Represents the game state
+    - `players`: number of players
+    - `spectators`: number of spectators
+    - `grid`: what is visible to player
+    - `gold`: total number of gold on map
+    - `gold-remaining`: amount of gold remaining on map
+    - 
+`Map` Structure (from the map module):
+- Represents the game map as a 2D grid of characters.
+- Members:
+  - `rows`: Number of rows in the map.
+  - `cols`: Number of columns in the map.
+  - `grid`: 2D array representing the map layout.
+
+`Player` Structure:
+- Represents the player
+    - `letter`: represents each player moving on map
+    - `address`: client's port address
+    - `purse`: gold collected
+    - `known-map`: map seen so far
+    - `position`: player's position on map
+    - `name`: player's name
+    
+`Gold Pile` Structure:
+- Pile's of gold 
+    - `location`: represents location of gold
+    - `amount`: amount of gold in the pile
+    - `collected`: if gold was collected or not
+
+
+### Client Side
+`Client` Structure:
+- Represents the client
+    - `role`: player or spectator
+    - `letter`: letter assigned to player
+    - `purse`: gold held if player
+    - `Map`: Map structure
+ 
+
+## Testing Plan
+
+### Unit Testing
+- **Map**: Load, pad, verify dimensions, and correct parsing
+- **gold**: Test randomization, value ranges, and depletion
+- **player**: Ensure correct letter assignment (decreasing order), movement, and map visibility
+- **game**: edge case handling (max players, gold runs out)
+- **display**: Make sure map display is visible to players
+
+
+### Integration Testing
+- Launch server with valid/invalid args 
+- Connect multiple clients simultaneously 
+- Test player quitting and rejoining 
+- Simulate network failures 
+- Test illegal keystrokes
+
+### System Testing
+- Play through the Game
+- Run game with bots and with real clients
+- Test visibility logic
+- Test Simultaneous Moves
+
+We will also use:
+- Padmap to validate maps
+- valgrind to ensure no memory leaks
+- Make clean && make all to verify build system
