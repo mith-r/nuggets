@@ -62,7 +62,7 @@ The server runs as a background process. It takes in command-line arguments and 
 - Port number printed to `stdout`
 - Errors/events logged to `stderr`
 - **Mesages to Clients**:
-    -Grid, Display, Quit, and erros
+    -Grid, Display, Quit, and errors
 
 
 ### Logic (Pseudocode)
