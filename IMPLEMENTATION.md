@@ -1,119 +1,356 @@
 # CS50 Nuggets
 ## Implementation Spec
-### Team name, term, year
-
-> This **template** includes some gray text meant to explain how to use the template; delete all of them in your document!
+### Team 16 TBMGO shark
 
 According to the [Requirements Spec](REQUIREMENTS.md), the Nuggets game requires two standalone programs: a client and a server.
 Our design also includes x, y, z modules.
 We describe each program and module separately.
-We do not describe the `support` library nor the modules that enable features that go beyond the spec.
-We avoid repeating information that is provided in the requirements spec.
+We do not describe the `support` library nor the modules that enable features that go beyond the spec. We avoid repeating information that is provided in the requirements spec. 
 
-## Plan for division of labor
+Here we focus on the core subset:
 
-> Update your plan for distributing the project work among your 3(4) team members.
-> Who writes the client program, the server program, each module?
-> Who is responsible for various aspects of testing, for documentation, etc?
+- Project Division
+- Data structures
+- Control flow: pseudo code for overall flow, and for each of the functions
+- Detailed function prototypes and their parameters
+- Error handling and recovery
+- Testing plan
 
-## Player
 
-> Teams of 3 students should delete this section.
+## Project Division:
 
-### Data structures
+- **Ben/Tarini**: Server implementation (`server.c`) — initialization, message handling, game logic.
+- **Mithun**: Grid handling (`grid.c`) — grid loading, gold placement.
+- **Tarini**: Client implementation (`client.c`) — user interface with `ncurses`, message parsing.
+- **Gustavo/Mithun**: Visibility and Line of Sight Algorithm (`grid.c`)
+- **All of us**: Error Handling/Testing
+---
 
-> For each new data structure, describe it briefly and provide a code block listing the `struct` definition(s).
-> No need to provide `struct` for existing CS50 data structures like `hashtable`.
-
-### Definition of function prototypes
-
-> For function, provide a brief description and then a code block with its function prototype.
-> For example:
-
-A function to parse the command-line arguments, initialize the game struct, initialize the message module, and (BEYOND SPEC) initialize analytics module.
+## Data structures:
 
 ```c
-static int parseArgs(const int argc, char* argv[]);
+typdef struct game{
+    int players;
+    char** playerLog;
+    bool isSpectator;
+    map_t map;
+    int goldTotal;
+    int goldRemaining;
+    gold_t piles;
+} game_t;
+
 ```
-### Detailed pseudo code
-
-> For each function write pseudocode indented by a tab, which in Markdown will cause it to be rendered in literal form (like a code block).
-> Much easier than writing as a bulleted list!
-> For example:
-
-#### `parseArgs`:
-
-	validate commandline
-	initialize message module
-	print assigned port number
-	decide whether spectator or player
-
----
-
-## Server
-
-### Data structures
-
-> For each new data structure, describe it briefly and provide a code block listing the `struct` definition(s).
-> No need to provide `struct` for existing CS50 data structures like `hashtable`.
-
-### Definition of function prototypes
-
-> For function, provide a brief description and then a code block with its function prototype.
-> For example:
-
-A function to parse the command-line arguments, initialize the game struct, initialize the message module, and (BEYOND SPEC) initialize analytics module.
+```c
+typdef struct grid{
+    int rows;
+    int cols;
+} grid_t;
+```
 
 ```c
-static int parseArgs(const int argc, char* argv[]);
+typedef struct player{
+    char letter;
+    int address;
+    char name;
+    int purse;
+    map_t playerMap;
+    int posX;
+    int posY;
+} player_t;
 ```
-### Detailed pseudo code
 
-> For each function write pseudocode indented by a tab, which in Markdown will cause it to be rendered in literal form (like a code block).
-> Much easier than writing as a bulleted list!
-> For example:
+```c
+ typdef struct gold{
+     int posX;
+     int posY;
+     bool collected;
+ } gold_t; 
+```
 
-#### `parseArgs`:
+## Functions
 
-	validate commandline
-	verify map file can be opened for reading
-	if seed provided
-		verify it is a valid seed number
-		seed the random-number generator with that seed
-	else
-		seed the random-number generator with getpid()
+Main - initializes modules, checks parameters, runs message loop
+```c
+int main(const int argc, char* argv[]);
+```
+```
+If incorrect number of arguments:
+    Print usage message and exit.
+    
+Call parseArgs to get validated map file
 
----
+Call newGame to initialize game struct:
+    - Load map.
+    - Set player log and gold piles
+    
+Initialize server socket/message module.
 
-## XYZ module
+Loop while game is running:
+    - Receive message from client.
+    - Pass message and client address to handleMessage
+    
+On game end or shutdown:
+    - Call endGame
+    - Clean up and exit
+```
+### Server
+ newGame - initializes core game state
+ ``` c
+game_t* newGame(const char* mapFile);
+```
+```
+Allocate memory for game struct.
 
-> For each module, repeat the same framework above.
+Call newGrid(mapFile) to load map.
 
-### Data structures
+Initialize player log and player count.
 
-### Definition of function prototypes
+Set goldTotal and goldRemaining.
 
-### Detailed pseudo code
+Call setGold to randomly assign gold piles.
 
----
+Return initialized game_t pointer.
+```
 
-## Testing plan
 
-### unit testing
+ parseArgs - validates and extracts arguments
+``` c
+void parseArgs(int argc, char* argv[], char** mapFile, int* seed);
+```
+```
+If incorrect number of arguments:
+    Print error and exit
+    
+If seed is invalid:
+    print error and exit
+    
+    if seed is valid:
+        store seed
 
-> How will you test each unit (module) before integrating them with a main program (client or server)?
+Attempt to open map file.
+If error:
+    print error and exit
 
-### integration testing
+If successful:
+    Store filename
+    
+return
 
-> How will you test the complete main programs: the server, and for teams of 4, the client?
+```
+ handleConnect - processes new player connections
+ ```c
+void handleConnect(game_t* game, player_t* player);
+```
+```
+Assign next available letter to player.
 
-### system testing
+Initialize player struct and position.
 
-> For teams of 4: How will you test your client and server together?
+Add player to playerLog.
 
----
+Send OK, GRID, DISPLAY, and GOLD messages to player.
+```
 
-## Limitations
+ handleDisconnect - handles player quitting
+ ``` c
+void handleDisconnect(game_t* game, player_t* player);
+```
+```
+Remove player from playerLog.
 
-> Bulleted list of any limitations of your implementation.
-> This section may not be relevant when you first write your Implementation Plan, but could be relevant after completing the implementation.
+Decrement player count.
+
+If player count reaches zero:
+    Trigger endGame.
+```
+ handleMessage - parses and dispatches client messages
+ ```c
+void handleMessage(game_t* game, const char* message, int clientAddr);
+```
+```
+If message is "PLAY":
+    Call handleConnect.
+
+Else if message is "SPECTATE":
+    Call handleSpectate.
+
+Else if message starts with "KEY":
+    Process direction.
+    Update player position.
+    Check for gold collection.
+    Send updated DISPLAY and GOLD messages.
+
+Else if message is "QUIT":
+    Call handleDisconnect.
+```
+handleSpectate - processes spectator connections
+``` c
+void handleSpectate(game_t* game, int clientAddr);
+```
+```
+If a spectator already exists:
+    Overwrite existing one.
+
+Set isSpectator to true.
+
+Send GRID, DISPLAY, and GOLD messages to spectator.
+```
+ endGame - final cleanup and message broadcast
+ ``` c
+void endGame(game_t* game);
+ ```
+ ```
+ Send QUIT message with final scores to all players and spectator.
+
+Free playerLog, map, and gold piles.
+
+Close message module.
+
+Free game struct and exit.
+ ```
+
+### Client
+ parseArgs - extracts server info and optional name
+ ``` c
+bool parseArgs(int argc, char* argv[], char** host, int* port, char** name);
+```
+```
+If insufficient arguments:
+    Print usage message and return false.
+
+Parse host, port, and optional name.
+
+Return true.
+```
+ 
+
+ sentToServer - sends inital message to play or spectate
+ ```c
+void sendToServer(const char* message);
+```
+```
+If player:
+    Format PLAY message with name.
+
+If spectator:
+    Format SPECTATE message.
+
+Send to server.
+```
+ handleMessage (given in message module)
+quitGame - terminates client and prints message
+``` c
+void quitGame();
+```
+```
+End ncurses window.
+
+Print final score/message to user.
+
+Exit.
+```
+
+### Grid
+ newGrid - loads map into memory
+ ``` c
+map_t* newGrid(const char* mapFile);
+```
+```
+Open file.
+
+Count rows and columns.
+
+Allocate and populate map struct.
+
+Return map_t pointer.
+```
+ deleteGrid - frees grid memory
+ ``` c
+void deleteGrid(map_t* grid);
+```
+```
+Free map content and grid struct.
+```
+- newCol
+- newRow
+
+getPos - returns map char at (x,y)
+ ```c
+char getPos(map_t* map, int x, int y);
+```
+```
+Convert (x, y) to linear index.
+
+Return char at that index.
+```
+ setGold - randomly assigns gold piles
+ ```c
+void setGold(map_t* map, gold_t* piles, int totalGold);
+```
+```
+For each gold pile:
+    Randomly choose unoccupied (x, y).
+
+    Assign gold value.
+
+    Update piles and mark map with '*'.
+```
+ getGold - checks for gold at position
+ ```c
+int getGold(map_t* map, int x, int y, gold_t* piles);
+```
+```
+Iterate over gold piles.
+
+If pile at (x, y) and not collected:
+    Mark as collected.
+    Return gold amount.
+
+Return 0.
+```
+
+## Function Prototypes
+
+### Server
+```c
+int main(const int argc, char* argv[]);
+game_t* newGame(const char* mapFile);
+void parseArgs(int argc, char* argv[], char** mapFile, int* seed);
+void handleConnect(game_t* game, player_t* player);
+void handleDisconnect(game_t* game, player_t* player);
+void handleMessage(game_t* game, const char* message, int clientAddr);
+void handleSpectate(game_t* game, int clientAddr);
+void endGame(game_t* game);
+bool parseArgs(int argc, char* argv[], char** host, int* port, char** name);
+void sendToServer(const char* message);
+void quitGame();
+```
+
+### Client
+```c
+bool parseArgs(int argc, char* argv[], char** host, int* port, char** name);
+void sendToServer(const char* message);
+void quitGame();
+```
+
+### Map
+```c
+grid_t* newGrid(const char* mapFile);
+void deleteGrid(map_t* grid);
+char getPos(map_t* map, int x, int y);
+void setGold(map_t* map, gold_t* piles, int totalGold);
+int getGold(map_t* map, int x, int y, gold_t* piles);
+```
+
+## Error Handling and Recovery
+- log error messages using functions in log module
+- check for memory errors
+- print errors to stderr and exit upon error
+
+
+## Testing Plan 
+- Unit testing
+    - Test each module (client, map, server) and its functions
+- integration testing
+    - After verifying functions work for each module, test the modules in conjunction of each other and run the game
+- Memory testing using valgrind
