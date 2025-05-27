@@ -4,11 +4,10 @@
  * 
  */
 
-
 #include <stdio.h>
 #include <stdlib.h>
 #include "message.h"  
-#include "grid.h"     
+#include "map.h"     
 #include "player.h"  
 #include "log.h"
 
@@ -19,19 +18,15 @@ typedef struct player {
     int y;
     char* username;
     char letter;
-
 } player_t;
 
 
 player_t* player_new(char* username, char letter, int x, int y) {
-    
     player_t* newPlayer = malloc(sizeof(player_t));
-
     newPlayer -> username = username;
     newPlayer->letter = letter;
     newPlayer -> x = x;
     newPlayer->y = y;
-
     return newPlayer;
 }
 
@@ -57,37 +52,30 @@ int player_getY(player_t* player) {
 
 //gets how much gold a player has
 int player_getGold(player_t* player) {
-
     if (player == NULL) {
         flog_v(stderr, "Could not get gold from NULL player");
         return;
     }
-
     return player->gold;
 }
 
 
 //adding gold to a player
 static void player_depositGold(player_t* player, int gold) {
-
     if (player == NULL) {
         flog_v(stderr, "Could not deposit gold to NULL player");
         return;
     }
-
     player->gold += gold;
 }
 
 
-
 //gets the letter assigned to the player
 char player_getLetter(player_t* player) {
-
     if (player == NULL) {
         flog_v(stderr, "Could not get letter from NULL player");
         return;
     }
-
     return player->letter;
 }
 
@@ -99,9 +87,7 @@ char* player_getUsername(player_t* player) {
         flog_v(stderr, "Could not get username from NULL player");
         return;
     }
-
     return player->username;
-
 }
 
 
@@ -114,4 +100,41 @@ void player_delete(player_t* player) {
 
     free(player->username);
     free(player);
+}
+
+
+
+int main(const int argc, char* argv[]) {
+    
+    if (argc > 4) {
+        flog_v(stderr, "incorrect number of arguments");
+        exit(1);
+    }
+
+    if (argv[1] == NULL) {
+        flog_v(stderr, "invalid hostname");
+        exit(2);
+    }
+
+    if (argv[2] == NULL) {
+        flog_v(stderr, "invalid port");
+        exit(3);
+    }
+
+    //check if entered optional username
+    if (argv[3] != NULL) {
+        
+        
+    }
+
+    game_t* game = game_init()
+
+    char* hostname = argv[1];
+    int port = argv[3];
+    
+    //initialize message 
+    if (message_init(hostname) == 0) {
+        flog_v(stderr, "wrong port, could not initialize message");
+        exit(4);
+    }
 }
