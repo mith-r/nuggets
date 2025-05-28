@@ -1,7 +1,8 @@
 /*
  * `client.c` - Nuggets game client 
  * 
- * Tarini Gupta, CS50, Spring 2025
+ * Authors: Benjamin Lin, Tarini Gupta, Mithun Rameshkumar, Gustavo Lopez-Flemming
+ * CS50, Spring 2025
  */
 
 #include <stdio.h>
