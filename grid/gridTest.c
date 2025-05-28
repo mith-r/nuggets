@@ -18,7 +18,15 @@
 
  static void printGrid(grid_t* playerGrid, int pRow, int pCol);
 
- /* TO DO: ADD HEADER
+ /* main()
+  *   argc - number of arguments
+  *   argv - array of arguments
+  * 
+  * loads a map, randomly places gold, takes player through coordinates,
+  * checks visibility, and cleans up
+  * 
+  * Returns 0 on success, non-zero otherwise
+  *
   */
  int main(const int argc, char* argv[])
  {
@@ -35,14 +43,141 @@
 
     //Testing visibility 
 
-    //TO DO: TESTING VISIBILITY THIS IS JUST BUSYWORK
+    //Below assumes default map. If test map changed, must use different
+
+    mapUpdate(playerGrid, 3, 12);
+    printGrid(playerGrid, 3, 12);
+    
+    mapUpdate(playerGrid, 4, 12);
+    printGrid(playerGrid, 4, 12);
+    
+    mapUpdate(playerGrid, 5, 12);
+    printGrid(playerGrid, 5, 12);
+    
+    mapUpdate(playerGrid, 6, 12);
+    printGrid(playerGrid, 6, 12);
+    
+    mapUpdate(playerGrid, 7, 12);
+    printGrid(playerGrid, 7, 12);
+    
+    mapUpdate(playerGrid, 7, 13);
+    printGrid(playerGrid, 7, 13);
+    
+    mapUpdate(playerGrid, 7, 14);
+    printGrid(playerGrid, 7, 14);
+    
+    mapUpdate(playerGrid, 7, 15);
+    printGrid(playerGrid, 7, 15);
+    
+    mapUpdate(playerGrid, 7, 16);
+    printGrid(playerGrid, 7, 16);
+    
+    mapUpdate(playerGrid, 7, 17);
+    printGrid(playerGrid, 7, 17);
+    
+    mapUpdate(playerGrid, 7, 18);
+    printGrid(playerGrid, 7, 18);
+    
+    mapUpdate(playerGrid, 7, 19);
+    printGrid(playerGrid, 7, 19);
+    
+    mapUpdate(playerGrid, 7, 20);
+    printGrid(playerGrid, 7, 20);
+    
+    mapUpdate(playerGrid, 7, 21);
+    printGrid(playerGrid, 7, 21);
+    
+    mapUpdate(playerGrid, 7, 22);
+    printGrid(playerGrid, 7, 22);
+    
+    mapUpdate(playerGrid, 7, 23);
+    printGrid(playerGrid, 7, 23);
+    
+    mapUpdate(playerGrid, 7, 24);
+    printGrid(playerGrid, 7, 24);
+    
+    mapUpdate(playerGrid, 7, 25);
+    printGrid(playerGrid, 7, 25);
+    
+    mapUpdate(playerGrid, 7, 26);
+    printGrid(playerGrid, 7, 26);
+    
+    mapUpdate(playerGrid, 7, 27);
+    printGrid(playerGrid, 7, 27);
+    
+    mapUpdate(playerGrid, 7, 28);
+    printGrid(playerGrid, 7, 28);
+    
+    mapUpdate(playerGrid, 7, 29);
+    printGrid(playerGrid, 7, 29);
+    
+    mapUpdate(playerGrid, 7, 30);
+    printGrid(playerGrid, 7, 30);
+    
+    mapUpdate(playerGrid, 7, 31);
+    printGrid(playerGrid, 7, 31);
+    
+    mapUpdate(playerGrid, 7, 32);
+    printGrid(playerGrid, 7, 32);
+    
+    mapUpdate(playerGrid, 7, 33);
+    printGrid(playerGrid, 7, 33);
+    
+    mapUpdate(playerGrid, 7, 34);
+    printGrid(playerGrid, 7, 34);
+    
+    mapUpdate(playerGrid, 7, 35);
+    printGrid(playerGrid, 7, 35);
+    
+    mapUpdate(playerGrid, 7, 36);
+    printGrid(playerGrid, 7, 36);
+    
+    mapUpdate(playerGrid, 7, 37);
+    printGrid(playerGrid, 7, 37);
+    
+    mapUpdate(playerGrid, 7, 38);
+    printGrid(playerGrid, 7, 38);
+    
+    mapUpdate(playerGrid, 7, 39);
+    printGrid(playerGrid, 7, 39);
+    
+    mapUpdate(playerGrid, 7, 40);
+    printGrid(playerGrid, 7, 40);
+    
+    mapUpdate(playerGrid, 8, 40);
+    printGrid(playerGrid, 8, 40);
+    
+    mapUpdate(playerGrid, 9, 40);
+    printGrid(playerGrid, 9, 40);
+    
+    mapUpdate(playerGrid, 9, 41);
+    printGrid(playerGrid, 9, 41);
+    
+    mapUpdate(playerGrid, 9, 42);
+    printGrid(playerGrid, 9, 42);
+    
+    mapUpdate(playerGrid, 9, 43);
+    printGrid(playerGrid, 9, 43);
+    
+    mapUpdate(playerGrid, 9, 44);
+    printGrid(playerGrid, 9, 44);
 
     delete_grid(playerGrid); //Deleting grid
 
     exit(EXIT_SUCCESS);
  }
 
- /* TO DO: ADD HEADER*/
+
+
+ /* printGrid()
+  *   playerGrid - pointer to grid being used
+  *   pRow - the player's current row index
+  *   pCol - the player's current column index
+  * 
+  * Loops over every cell in playerGrid, prints '@' at (pRow,pCol),
+  * shows terrain or '*' for gold on visible tiles, and spaces elsewher
+  *
+  */
  static void printGrid(grid_t* playerGrid, int pRow, int pCol)
  {
     fprintf(stdout, "Testing grid: \n");
