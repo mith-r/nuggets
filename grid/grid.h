@@ -96,7 +96,7 @@ void point_setPlayer(point_t *point, char playerLetter);
 
 /**************** initializeMap ****************/
 /*Parse the given map.txt file to build the grid */
-grid_t *initializeMap(File *fp);
+grid_t *initializeMap(FILE *fp);
 
 /**************** randomizeGold ****************/
 /*Distribute gold randomly across the map*/
