@@ -1,9 +1,18 @@
-
+/*
+ * grid.c - CS50 - grid module for final projection
+ *
+ * Implements 'grid.h' 
+ * 
+ * Gustavo Lopez-Fleming, Tarini Gupta, Benjamin Lin, Mithun Rameshkumar
+ * 
+ * May 2025
+ */
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
+#include <ctype.h>
 
 typedef struct cell
 {                      // represents a single cell on the grid
@@ -25,55 +34,116 @@ typedef struct grid
 /**************** CORE GRID FUNCTIONS ****************/
 
 /**************** grid_new ****************/
-/*Initialize an empty grid struct */
-grid_t new_grid();
+/* See grid.h for more info */
+grid_t* grid_new()
+{
+    grid_t* grid = malloc_(sizeof(grid_t));
+
+    if (grid == NULL) {
+        return NULL;
+    }
+    else {
+        return grid;
+    }
+}
 
 /**************** grid_insert ****************/
-/*Insert a point into the grid at a given row and column*/
-void grid_insert(grid_t *grid, point_t *point, int row, int col);
+/*See grid.h for more info*/
+void grid_insert(grid_t *grid, point_t *point, int row, int col)
+{
+    grid->map[row][col] = point;
+}
 
 /**************** grid_get ****************/
-/*Return point structure found at a specified row and column*/
-point_t *grid_get(grid_t *grid, int row, int col);
+/*See grid.h for more info*/
+point_t *grid_get(grid_t *grid, int row, int col)
+{
+    return grid->map[row][col];
+}
 
 /**************** grid_getnumRows ****************/
-/*Get number of rows*/
-int grid_getnumRows(grid_t *grid);
+/*See grid.h for more info*/
+int grid_getNumRows(grid_t *grid)
+{
+    return grid->numRows;
+}
 
 /**************** grid_getnumCols ****************/
-/*Get number of columns*/
-int grid_getnumCols(grid_t *grid);
+/*See grid.h for more info*/
+int grid_getNumCols(grid_t *grid)
+{
+    return grid->numCols;
+}
 
 /**************** grid_setnumRows ****************/
-/*Get number of rows*/
-int grid_setnumRows(grid_t *grid, int numRows);
+/*See grid.h for more info*/
+int grid_setNumRows(grid_t *grid, int numRows)
+{
+    if (grid != NULL) {
+        grid->numRows = numRows;
+    }
+}
 
 /**************** grid_setnumCols ****************/
-/*set number of columns*/
-int grid_setnumCols(grid_t *grid, int numCols);
+/*See grid.h for more info*/
+int grid_setNumCols(grid_t *grid, int numCols)
+{
+    if (grid != NULL){
+        grid->numCols = numCols;
+    }
+}
 
 /**************** POINT MANAGEMENT ****************/
 
 /**************** point_new ****************/
-/*Initialize a new point with a given character value*/
-point_t *point_new(char character);
+/*See grid.h for more info*/
+point_t *point_new(char character)
+{
+    point_t* point = malloc_as(sizeof(point_t));
+    if (point == NULL || isspace((unsigned char)character)){ 
+        return NULL;
+    }
+
+    //Set defaults
+    point->character = character;
+    point->playerLetter = ' ';
+    point->nuggetCount = 0;
+    point->isVisible = false;
+    point->visibleGold = false;
+    return point;
+}
+
 
 /**************** point_getVal ****************/
-/*Return the terrain value of a given point*/
-int point_getVal(point_t *point);
+/*See grid.h for more info*/
+int point_getVal(point_t *point)
+{
+    if (point == NULL){
+        return '\0';
+    }
+
+    return point->val;
+}
 
 /**************** point_setVal ****************/
-/*Set the terrain value of a given point*/
-int point_setVal(point_t *point, int val);
+/*See grid.h for more info*/
+void point_setVal(point_t *point, int val)
+{
+    if (point == NULL){
+        return;
+    }
+
+    point->val = val;
+}
 
 /**************** point_getChar ****************/
-/*Return the character at the point given */
+/*See grid.h for more info*/
 int point_getChar(point_t *point);
 
 /**************** point_getVisibility ****************/
-/*Return whether the player can see the given point*/
+/*See grid.h for more info*/
 bool point_getVisibility(point_t *point);
 
 /**************** point_setVisibility ****************/
-/*Set whether the point is visible to the player*/
+/*See grid.h for more info*/
 void point_setVisibility(point_t *point, bool isVisible);
