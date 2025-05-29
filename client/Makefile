@@ -2,10 +2,11 @@
 #
 # Authors: Tarini, Ben, Gustavo, Mithun
 
+PROGS = client
 CC = gcc
 CFLAGS = -Wall -pedantic -std=c11 -ggdb
 VAL = valgrind --leak-check=full --show-leak-kinds=all -s
-LIB = ../support/support.a
+LIB = ../support/message.o ../support/log.o
 
 .PHONY: all clean valgrind
 
@@ -15,6 +16,9 @@ client: client.o $(LIB)
 	$(CC) $(CFLAGS) $^ -lncurses -o $@
 
 client.o: $(LIB)
+
+test: $(PROGS)
+	bash ./testing.sh
 
 clean:
 	rm -f *.o
