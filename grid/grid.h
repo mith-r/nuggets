@@ -1,3 +1,14 @@
+/*
+ * grid.h - header file for CS50 final project
+ *
+ * See grid.c for implementation
+ * Mithun Rameshkumar, Gustavo Lopez-Fleming, Tarini Gupta, Benjamin Lin
+ * 
+ * May 2025
+ */
+
+#ifndef __GRID_H
+#define __GRID_H
 
 #include "file.h"
 #include <stdio.h>
@@ -5,28 +16,14 @@
 #include <string.h>
 #include <stdbool.h>
 
-typedef struct cell
-{                      // represents a single cell on the grid
-    char character;    // Character on the map (.,#,-, etc.)
-    char playerLetter; // player letter (A, B, ...)
-    int val;           // numeric code for terrain type
-    int nuggetCount;   // Number of nuggets at this cell
-    bool isVisible;    // Whether this cell is visible to the player
-    bool visibleGold;  // is gold present but hidden
-} point_t;
-
-typedef struct grid
-{
-    int numRows;            // number of rows
-    int numCols;            // number of columns
-    point_t *map[100][100]; // map as a 2D array
-} grid_t;
+typedef struct cell point_t;
+typedef struct grid grid_t;
 
 /**************** CORE GRID FUNCTIONS ****************/
 
 /**************** grid_new ****************/
 /*Initialize an empty grid struct */
-grid_t new_grid();
+grid_t grid_new();
 
 /**************** grid_insert ****************/
 /*Insert a point into the grid at a given row and column*/
@@ -38,19 +35,19 @@ point_t *grid_get(grid_t *grid, int row, int col);
 
 /**************** grid_getnumRows ****************/
 /*Get number of rows*/
-int grid_getnumRows(grid_t *grid);
+int grid_getNumRows(grid_t *grid);
 
 /**************** grid_getnumCols ****************/
 /*Get number of columns*/
-int grid_getnumCols(grid_t *grid);
+int grid_getNumCols(grid_t *grid);
 
 /**************** grid_setnumRows ****************/
 /*Get number of rows*/
-void grid_setnumRows(grid_t *grid, int numRows);
+void grid_setNumRows(grid_t *grid, int numRows);
 
 /**************** grid_setnumCols ****************/
 /*set number of columns*/
-void grid_setnumCols(grid_t *grid, int numCols);
+void grid_setNumCols(grid_t *grid, int numCols);
 
 /**************** POINT MANAGEMENT ****************/
 
@@ -115,3 +112,5 @@ void point_delete(point_t *point);
 /****************  delete_grid ****************/
 /*Free the grid*/
 void delete_grid(grid_t *grid);
+
+#endif //__GRID_H
