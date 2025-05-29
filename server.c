@@ -16,9 +16,12 @@ game_t* game_new(char* mapFile);
 void game_start(game_t* game);
 void parseArgs(const int argc, const char* argv[], int* seed);
 player_t* player_new(char* username, game_t* game, addr_t playerAddress);
+void assignGoldToPlayer(player_t* player, game_t* game);
+bool assignRandomSpot(player_t* player, game_t* game);
 player_t* findPlayerByAddress(game_t* game, addr_t* addr);
 player_t* findPlayerByLetter(game_t* game, char playerLetter);
-
+static void pointValueToChar(int val, char* final);
+char* displayGame(game_t* game, addr_t* fromClient);
 
 //global constants
 MaxNameLength = 50;   // max number of chars in playerName
@@ -326,7 +329,6 @@ player_t* player_new(char* username, game_t* game, addr_t playerAddress) {
     } 
 
 
-
     //assign gold to map for player
 
     //assign player a random spot in the map to start out
@@ -335,10 +337,30 @@ player_t* player_new(char* username, game_t* game, addr_t playerAddress) {
   }
 }
 
+//assigns gold to player
+void assignGoldToPlayer(player_t* player, game_t* game) {
+
+  //looping through map, get all 
+  for (int i = 0; i< grid_getNumRows(game->publicMap); i++) {
+    for (int j = 0; j<gird_getNumCols(game->publicMap); j++) {
+        point_t* gridPoint = grid_get(game->publicMap, i, j);
+        int amountGold = point_getGold(gridPoint);
+
+        //if there was gold at that spot, give it to a player and remove it after collected
+        if (amountGold > 0) {
+          point_t* localPoint = grid_get(player->grid, i, j);
+          point_setGold(localPoint, amount);
+          grid_insert(player->grid, localPoint, i, j);
+        }
+    }
+  }
+}
+
+
 
 
 //assigns a random spot for a player
-bool assign_random_spot(player_t* player, game_t* game) {
+bool assignRandomSpot(player_t* player, game_t* game) {
 
   srand(time(NULL));  // produce a random number each time program runs
 
@@ -353,10 +375,10 @@ bool assign_random_spot(player_t* player, game_t* game) {
 
       //getting that point in the map
       point_t* randomPoint = grid_get(game->publicMap, randomX, randomY);
-      int pointVal = point_isValid(randomPoint);
+      int pointVal = point_getVal(randomPoint);
 
-      //check if valid point
-      if (point_isValid) {
+      //check if valid point (1 means inside a room)
+      if (pointVal == 1) {
           player->x = randomX;
           player->y = randomY;
 
@@ -373,9 +395,9 @@ bool assign_random_spot(player_t* player, game_t* game) {
       if (player->x == 0 && player->y == 0) {
         return false;
       }
-
   }
-      return true;  //true if randomly assigned a position for player
+  
+  return true;  //true if randomly assigned a position for player
 }
 
 
@@ -420,3 +442,153 @@ player_t* findPlayerByLetter(game_t* game, char playerLetter) {
   return NULL;  //return NULL if player could not be found
 }
 
+
+
+//display the game for client (local view for player, full view for spectator)
+char* displayGame(game_t* game, addr_t* fromClient) {
+
+  grid_t* localGrid = NULL;
+  grid_t* fullGrid = game->publicMap;
+  bool isSpectator = false;
+  
+  //find the matching player based on address of client
+  player_t* player = findPlayerByAddress(game, fromClient);
+
+  //if address matched with player
+  if (player != NULL) {
+    localGrid = player->grid;
+  }
+
+  //if didn't match with a player then client is a spectator
+  else {
+    isSpectator = true;
+  }
+
+  int numRows = grid_getNumRows(fullGrid);
+  int numCols = grid_getNumCols(fullGrid);
+  int totalSpaces = (numRows*numCols+10);
+
+  //string output will represent/display the entire game at that current moment
+  char* output = malloc(sizeof(char)*(total+1));
+
+  //check if memory was allocated
+  if (output == NULL) {
+    flog_v("Could not malloc string output to display game info");
+    return NULL;
+  }
+  
+  strcpy(output, "DISPLAY\n");
+
+  //concatenate grid to the output
+  for(int i = 0; i<numRows; i+) {
+    for (int j = 0; j<numCols; j++) {
+
+      //if they are a spectator we want to display local grid
+      if (!spectator) {
+        point_t* localPoint = grid_get(localGrid, i, j);
+        point_t* globalPoint = grid_get(fullGrid, i, j);
+
+        //if point is visible on grid
+        if (point_getVisabilityTrack(localPoint)) {
+          
+          //if player does not exist at that point
+          if (point_getPlayer(globalPoint) == ' ') {
+              
+              //if gold is hidden
+              if (localPoint->hiddenGold) {
+                int pointValue = point_getVal(localPoint);
+                
+                //appending the appropriate point on the map to the full char/display
+                pointValueToChar(pointValue, output);
+            
+            }
+          }
+
+        //if gold exists at that point, it appears as '*' on the map
+        else if (point_getGold(globalPoint) > 0) {
+          strcat(output,"*");
+        }
+
+        //else if the player exists at the point
+        else {
+          
+          char playerAtPointLetter = point_getPlayer(globalPoint);
+
+          //if not spectating
+          if (!isSpectator) {
+            char currentPlayerLetter = player->letter;
+
+            //if the client is that player, display themselves as an '@' symbol on map
+            if (playerAtPointLetter == currentPlayerLetter) {
+              strcat(output, "@");
+            }
+          }
+        }
+      }
+
+      //else player is invisible, so add an empty space because no player is at that spot
+      else {
+        strcat(output, " ");
+      }
+    }
+
+    //else the client is a SPECTATOR
+    else {
+      point_t* globalPoint = grid_get(publicMap, i, j);
+
+      //if no player occupies that point
+      if(point_getPlayer(globalPoint) == ' ') {
+        
+        //if gold exists at that point
+        if (point_getGold(globalPoint) > 0) {
+          strcat(output, "*");
+        }
+
+        //else gold does not exist there, so it do the appropriate symbol on the map
+        else {
+          int pointValue = point_getVal(globalPoint);
+          pointValueToChar(pointValue, output);
+        }
+      }
+
+
+      //if player DOES exist at that point, display their letter
+      if (point_getPLayer(globalPoint) != ' ') {
+        char playerAtPointLetter = point_getPlayer(globalPoint);
+        char playerLetter[2];  //creating array so we can safely append to output
+        playerLetter[0] = playerAtPointLetter;
+        playerLetter[1] = '\0';  //terminate with null character
+
+        strcat(output, playerLetter);
+      }
+    }
+    }
+      strcat(output, "\n");  //start new row
+  }
+
+  return output;  //returns display of game
+}
+
+
+//converts a value (representing characters on the map) to their characters
+static void pointValueToChar(int val, char* final) {
+  if (val == 0) {   //if empty at that point on map
+    strcat(final, " ");
+  }
+  if (val == 1) {   //if inside room 
+    return '.';
+  }
+  if (val == 2) {   //if a horizontal wall
+    strcat(final, "-");
+  }
+  if (val == 3) {   //if a corner 
+    strcat(final, "#");
+  }
+  if (val == 4) {   //if a corner 
+    strcat(final, "+");
+  }
+  if (val == 5) {   //if a vertical wall
+    strcat(final, "|");
+  }
+  return;
+}
