@@ -43,7 +43,7 @@
 
     //Testing visibility 
 
-    //Below assumes default map. If test map changed, must use different
+    //Below assumes main.txt map. If test map changed, must use different
 
     mapUpdate(playerGrid, 3, 12);
     printGrid(playerGrid, 3, 12);
