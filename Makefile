@@ -1,20 +1,18 @@
 # Makefile for nuggets
 # 
 
-OBJS = server.o client.o
+OBJS = server.o
 LIBS = support
 
 CFLAGS = -Wall -pedantic -std=gnu11 -ggdb -I../libcs50 -I../common
 CC = gcc
 MAKE = make
 
-all: server client
+all: server
 
 server: $(OBJS)
 	$(CC) $(CFLAGS) $(OBJS) $(LIBS) -o server
 
-client: $(OBJS2)
-	$(CC) $(CFLAGS) $(OBJS2) $(LIBS) -o client
 
 .PHONY: all test clean
 
@@ -23,7 +21,7 @@ client: $(OBJS2)
 	make clean
 	make
 
-# test: indextest
+# test: servertest
 # 	chmod +x ./testing.sh
 # 	bash -v ./testing.sh &> testing.out
 
