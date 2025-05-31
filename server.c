@@ -37,7 +37,7 @@ GoldMaxNumPiles = 30; // maximum number of gold piles
  */
 typedef struct game {
   player_t** player_array;  //array of all active players
-  grid_t* publicMap;     //game map displayed for everyone
+  grid_t* fullMap;     //game map displayed for everyone
   addr_t spectator;     //address of the spectator
   char letter;          //letter of player (A-Z)
   const char* mapFile;
@@ -378,9 +378,9 @@ player_t* player_new(char* username, game_t* game, addr_t playerAddress) {
 void assignGoldToPlayer(player_t* player, game_t* game) {
 
   //looping through map, get all 
-  for (int i = 0; i< grid_getNumRows(game->publicMap); i++) {
-    for (int j = 0; j<grid_getNumCols(game->publicMap); j++) {
-        point_t* gridPoint = grid_get(game->publicMap, i, j);
+  for (int i = 0; i< grid_getNumRows(game->fullMap); i++) {
+    for (int j = 0; j<grid_getNumCols(game->fullMap); j++) {
+        point_t* gridPoint = grid_get(game->fullMap, i, j);
         int amountGold = point_getGold(gridPoint);
 
         //if there was gold at that spot, give it to a player and remove it after collected
@@ -402,8 +402,8 @@ bool assignRandomSpot(player_t* player, game_t* game) {
   srand(time(NULL));  // produce a random number each time program runs
 
   bool assignedSpot = false;  //whether a player was assigned a random spot
-  int numRows = grid_getNumRows(game->publicMap);
-  int numCols = grid_getNumCosl(game->publicMap);
+  int numRows = grid_getNumRows(game->fullMap);
+  int numCols = grid_getNumCosl(game->fullMap);
 
   //if player hasn't been assigned a spot, give player random coordinates
   if (!assignedSpot) {
@@ -411,7 +411,7 @@ bool assignRandomSpot(player_t* player, game_t* game) {
       int randomY = rand()%(numCols+1);
 
       //getting that point in the map
-      point_t* randomPoint = grid_get(game->publicMap, randomX, randomY);
+      point_t* randomPoint = grid_get(game->fullMap, randomX, randomY);
       int pointVal = point_getVal(randomPoint);
 
       //check if valid point (1 means inside a room)
@@ -485,7 +485,7 @@ player_t* findPlayerByLetter(game_t* game, char playerLetter) {
 char* displayGame(game_t* game, addr_t* fromClient) {
 
   grid_t* localGrid = NULL;
-  grid_t* fullGrid = game->publicMap;
+  grid_t* fullGrid = game->fullMap;
   
   int numRows = grid_getNumRows(fullGrid);
   int numCols = grid_getNumCols(fullGrid);
@@ -617,3 +617,95 @@ static char pointValToChar(int pointVal) {
         default: return ' '; // empty space
     }
 }
+
+
+
+/*
+ * Moves a player on the map, handles 3 cases:
+ * 1st case: if point is empty, move that player
+ * 2nd case: if another player is occupying that point, swap their letters and positions
+ * 3rd case: invalid move/cannot move to that point on map
+ */
+static bool movePlayer(game_t* game, player_t* player, int currX, int currY) {
+  
+  grid_t* localGrid = player->grid;  //local grid
+  grid_t* fullGrid = game->fullMap;  //full grid
+
+  //getting old and new points of local grid
+  point_t* oldLocalPoint = grid_get(localGrid, currX, currY);
+  point_t* newLocalPoint = grid_get(localGrid, newX, newY);
+
+  //getting old and new points of global/full grid
+  point_t* oldGlobalPoint = grid_get(fullGrid, currX, currY);
+  point_t* newGlobalPoint = grid_get(fullGrid, newX, newY);
+
+  int pointVal = point_getVal(newLocalPoint);
+
+  // case 1: if point is empty (valid room/passage), move the player
+  if (pointVal == 1 || pointVal == 3) {
+    player->x = newX;
+    player->y = newY;
+    point_setPlayer(newLocalPoint, player->letter);
+    point_setPlayer(newGlobalPoint, player->letter);
+
+    //check for and collect gold
+    int numGold = point_getGold(newGlobalPoint);
+
+    //if there is gold at that point, player collects it
+    if (gold > 0) {
+
+      //update player's purse and justCollected gold
+      player->purse += gold;
+      player->justCollected = gold;
+
+      //update game's goldCollected and goldRemaining variables
+      game->goldCollected += gold;
+      game->goldRemaining = GoldTotal - game->goldCollected;
+      
+      goldCollected += gold;
+      point_setGold(newGlobalPoint, 0);
+    }
+
+    //clear old positions that had gold
+    point_setPlayer(oldLocalPoint, ' ');
+    point_setPLayer(oldGlobalPoint, ' ');
+
+    updateMap(localGrid, newX, newY);
+    return true;
+
+  }
+
+  char targetPlayerLetter = point_getPlayer(newGlobalPoint);
+
+  // case 2: if another player is on the destination point (swap the players)
+  if (targetPlayerLetter != ' ') {
+    player_t* otherPlayer = findPlayerByLetter(game, targetPlayerLetter);
+    
+    //if there exists that other player at that point
+    if (otherPlayer != NULL) {
+
+      //update the OTHER player's global position
+      otherPlayer->x = currX;
+      otherPlayer->y = currY;
+      point_setPlayer(oldGlobalPoint, targetPlayerLetter);
+
+      //update the CURRENT player's position
+      player->x = newX;
+      player->y = newY;
+      point_setPlayer(newGlobalPoint, player->letter);
+
+      // update LOCAL map: new position gets player, old one is cleared
+      point_setPlayer(newLocalPoint, player->letter);
+      point_setPlayer(oldLocalPoint, ' ');
+
+      updateMap(localGrid, newX, newY);
+      return true;
+    
+    }
+  }
+
+  //case 3: invalid move
+  updateMap(localGrid, player->x, player->y);
+  return false;
+}
+
