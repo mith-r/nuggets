@@ -44,7 +44,7 @@ typedef struct game {
   int mapRows;
   int mapCols;
   int totalPlayers;
- 
+  int quitCount;
 } game_t;
 
 
@@ -68,8 +68,8 @@ typedef struct point{
     char id;
     int goldCount;
     int val;
-    bool visibilityTrack;
-    bool invisibleGold;
+    bool isVisible;
+    bool visibleGold;
 } point_t;
 
 
@@ -619,14 +619,13 @@ static char pointValToChar(int pointVal) {
 }
 
 
-
 /*
  * Moves a player on the map, handles 3 cases:
  * 1st case: if point is empty, move that player
  * 2nd case: if another player is occupying that point, swap their letters and positions
  * 3rd case: invalid move/cannot move to that point on map
  */
-static bool movePlayer(game_t* game, player_t* player, int currX, int currY) {
+static bool movePlayer(game_t* game, player_t* player, int currX, int currY, int newX, int newY) {
   
   grid_t* localGrid = player->grid;  //local grid
   grid_t* fullGrid = game->fullMap;  //full grid
@@ -709,3 +708,100 @@ static bool movePlayer(game_t* game, player_t* player, int currX, int currY) {
   return false;
 }
 
+
+/*
+ * Handles keystrokes client presses and updates the player's position on the map
+ */
+static void processKeystroke(game_t* game, player_t* player, char* keyMessage) {
+
+  //null check
+  if (player == NULL) {
+    flog_v("Player passed into processKeystroke is NULL");
+    return;
+  }
+
+  if (keyMessage == NULL) {
+    flog_v("keyMessage passed into processKeystroke is NULL");
+    return;
+  }
+
+  //current x, y of player
+  int currX = player->x;
+  int currY = player->y;
+
+  //dx, dy -> distance player will move by
+  int* dx = 0;
+  int* dy = 0;
+
+  //if uppercase key pressed, we want to keep moving until we can't
+  bool keepMoving = false;
+
+  char keystroke = keyMessage[0];
+  flog_v("Processing player input...\n");
+
+  //handle QUIT (q)
+  if ((keystroke == 'Q')|| (keystroke == 'q')) {
+    flog_v("Player requested to quit. \n");
+
+    message_send(player->port, "You have QUIT");
+    return;
+  }
+
+  //handle keystrokes
+  moveByKey(keystroke, dx, dy, keepMoving);
+  int newX = currX + dx;
+  int newY = currY + dy;
+
+  //if lowercase key (keepingMoving is false)
+  if (!keepMoving) {
+    movePlayer(game, player, currX, currY, newX, newY);
+  }
+
+  //else UPPERCASE key (keepMoving is true), keep moving player until they can't move anymore
+  else { 
+    while(movePlayer(game, player, currX, currY, newX, newY)) {
+      //updating positions
+      currX = newX;
+      currY = newY;
+      newX += dx;
+      newY += dy;
+    }
+  }
+}
+
+
+/*
+ * Helper function that handles movement based on which key client pressed
+ * Processes LOWERCASE keys (move once)
+ * Process UPPERCASE keys (move continuously until can't on map)
+ */
+static void moveByKey(char key, int* dx, int* dy, bool* keepMoving) {
+  
+  switch (key) {
+    //lower case keystrokes
+    case 'h': dx = -1; dy = 0; return;  //move left, if possible
+    case 'l': dx = 1; dy = 0;  return;  // move right, if possible
+    case 'j': dx = 0; dy = -1;  return;  //move down, if possible
+    case 'k': dx = 0; dy=1;   return;  //move up, if possible
+    case 'y': dx = -1; dy= -1;  return;  //move diagonally up and left, if possible
+    case 'u': dx = 1; dy = 1;  return;  //move diagonally up and right, if possible
+    case 'b': dx = -1; dy = -1;  return;   //move diagonally down and left, if possible
+    case 'n': dx = 1; dy = -1;  return;   //move diagonally down and right, if possible
+
+
+    //upper case keystrokes
+    case 'H': dx = -1; dy = 0; keepMoving = true; return;  //move left, if possible
+    case 'L': dx = 1; dy = 0;  keepMoving = true; return;  // move right, if possible
+    case 'J': dx = 0; dy = -1;  keepMoving = true; return;  //move down, if possible
+    case 'K': dx = 0; dy=1;   keepMoving = true; return;  //move up, if possible
+    case 'Y': dx = -1; dy= -1; keepMoving = true; return;  //move diagonally up and left, if possible
+    case 'U': dx = 1; dy = 1;  keepMoving = true; return;  //move diagonally up and right, if possible
+    case 'B': dx = -1; dy = -1;  keepMoving = true; return;   //move diagonally down and left, if possible
+    case 'N': dx = 1; dy = -1;  keepMoving = true; return;   //move diagonally down and right, if possible
+
+    //if invalid key
+    default:
+      flog_v("Invalid input received.\n");
+      return;
+  }
+}
