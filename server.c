@@ -186,17 +186,6 @@ void parseArgs(const int argc, const char* argv[], char** mapFile, char** seed) 
     }
 }
 
-  
-
-    //if no optional seed is given, provide one
-    if (argv[1] == NULL) {
-        srand(getpid(seed));
-    }
-
-
-    return;
-}
-
 
 /*
  * validates the provided seed
