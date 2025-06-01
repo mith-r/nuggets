@@ -29,6 +29,8 @@ static char pointValToChar(int pointVal)
 char* displayGame(game_t* game, addr_t* fromClient);
 
 
+static void game_end(game_t* game);
+
 static void player_delete(player_t* player, game_t* game);
 static void game_delete(game_t* game);
 
@@ -904,6 +906,73 @@ static void moveByKey(char key, int* dx, int* dy, bool* keepMoving) {
       return;
   }
 }
+
+
+
+
+/*
+ * Ends the game and shows a summary of results
+ */
+static void game_end(game_t* game) {
+
+  //NULL check
+  if (game == NULL) {
+    log_v("ERROR: passed NULL game into game_end");
+    return;
+  }
+
+  //table summary of game results
+  size_t* summary_size = 1000;
+  char* game_summary = calloc(summary_size, sizeof(char));
+  
+  //check if memory was allocated
+  if (game_summary == NULL) {
+    log_e("ERROR: failed to allocate memory for game summary");
+    return;
+  }
+
+  //concatenate QUIT GAME OVER to summary
+  strcat(game_summary, "QUIT GAME OVER:\n");
+
+  //loop through player_array to build summary table
+  for (int i = 0; i<game->totalPlayers; i++) {
+    player_t* player = game->player_array[i];
+
+    if (player != NULL) {
+      char row[150];  //each row in the table
+
+      //format: playerLetter, purse, player name
+      snprintf(row, sizeof(row), "%c\t%d\t%s\n", player->letter, player->purse, player->username);
+      log_s("Player name entered into summary table: %s\n", player->username);
+
+      //safely appending each row to the game summary without exceeding size
+      // strcat(game_summary, row, summary_size - strlen(game_summary) - 1); 
+
+      strcat(game_summary, row);  //append each row to the game summary
+    }
+  }
+
+  //send the game summary to each player
+  for (int i = 0; i<game->totalPlayers, i++) {
+    player_t* player = game->player_array[i];
+
+    //check if player exists and their address exist
+    if (player != NULL && message_stringAddr(player->port) != NULL) {
+        message_send(player->port, game_summary);  //send the message to the player
+    }
+  }
+
+  //send message to spectator if there is one
+  if (message_isAdrr(game->spectator)) {
+    message_send(game->spectator, game_summary);
+  }
+
+  log_v("Freeing memory for game summary in game_end");
+  free(game_summary);
+}
+
+
+
 
 
 
