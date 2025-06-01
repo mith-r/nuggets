@@ -63,6 +63,7 @@ bool showGold = false;
 addr_t* address; //networking
 
 /************ validateArgs ************/
+/* Validates command-line arguments for hostname, port, and optional player name */
 static bool validateArgs(const int argc, const char* argv[]){
     //correct number of args
     if(argc != 4){
@@ -91,6 +92,7 @@ static bool validateArgs(const int argc, const char* argv[]){
 }
 
 /************ setUpDisplay ************/
+/* Initializes ncurses display with given grid dimensions */
 static void setUpDisplay(int nrows, int ncols){
     initscr(); //initialize ncurses
     cbreak(); //diables line buffering
@@ -104,6 +106,7 @@ static void setUpDisplay(int nrows, int ncols){
 }
 
 /************ exitGame ************/
+/* Exits the game, cleans up display and memory */
 static void exitGame(const char* input){
     if(input == NULL){
         log_v("NULL input to quit\n");
@@ -120,6 +123,7 @@ static void exitGame(const char* input){
 }
 
 /************ serverComs ************/
+/* Handles server communication loop and sends initial join message */
 static void serverComs(const char* serverHost, const char* serverPort){
     //NULL check
     if(serverHost == NULL || serverPort == NULL){
@@ -154,6 +158,7 @@ static void serverComs(const char* serverHost, const char* serverPort){
 
 //kind of redundant just has extra checks for null message/ port bur ultimately still calls message_send
 /************ messageServer ************/
+/* Sends a message to the server if the address is valid */
 void messageServer(addr_t addr, char* message){
     if(message == NULL){
         log_v("Error: NULL input\n");
@@ -167,6 +172,7 @@ void messageServer(addr_t addr, char* message){
 }
 
 /************ handleInput ************/
+/* Handles user key input and sends appropriate message to server */
 static bool handleInput(void* arg){
     char character = getch();
     char* msg;
@@ -199,6 +205,7 @@ static bool handleInput(void* arg){
 }
 
 /************ handleMessage ************/
+/* Handles messages received from the server and updates client state */
 static bool handleMessage(void* arg, const addr_t address, const char* input){
     if(input==NULL){
         log_v("NULL input in handleMessage\n");
@@ -278,7 +285,8 @@ static bool handleMessage(void* arg, const addr_t address, const char* input){
     return true;
 }
 
-/***************** resize *****************/
+/***************** handleResize *****************/
+/* Handles terminal resize events and prompts user to adjust window size */
 static void handleResize(int k){
     endwin();
     initscr();
@@ -297,6 +305,7 @@ static void handleResize(int k){
 
 
 /************ showDisplay ************/
+/* Renders the displayMessage, map, and player cursor to the screen */
 static void showDisplay(void){
     clear();
     mvprintw(0, 0, "%s", displayMessage);
@@ -346,6 +355,7 @@ static void parseMap(const char* input){
 }
 
 /************ cleanGame ************/
+/* Frees all dynamically allocated memory used by the client */
 static void cleanGame(void){
     if (!isSpectator) {
         if (playerName != NULL) {
