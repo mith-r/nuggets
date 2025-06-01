@@ -12,6 +12,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
+#include <math.h>
+#include <time.h>
 #include <ctype.h>
 #include "file.h"
 
@@ -38,7 +40,7 @@ typedef struct grid
 /* See grid.h for more info */
 grid_t *grid_new()
 {
-    grid_t *grid = malloc_(sizeof(grid_t));
+    grid_t* grid = malloc(sizeof(grid_t));
 
     if (grid == NULL)
     {
@@ -80,7 +82,7 @@ int grid_getNumCols(grid_t *grid)
 
 /**************** grid_setnumRows ****************/
 /*See grid.h for more info*/
-int grid_setNumRows(grid_t *grid, int numRows)
+void grid_setNumRows(grid_t *grid, int numRows)
 {
     if (grid != NULL)
     {
@@ -90,7 +92,7 @@ int grid_setNumRows(grid_t *grid, int numRows)
 
 /**************** grid_setnumCols ****************/
 /*See grid.h for more info*/
-int grid_setNumCols(grid_t *grid, int numCols)
+void grid_setNumCols(grid_t *grid, int numCols)
 {
     if (grid != NULL)
     {
@@ -104,7 +106,7 @@ int grid_setNumCols(grid_t *grid, int numCols)
 /*See grid.h for more info*/
 point_t *point_new(char character)
 {
-    point_t *point = malloc_as(sizeof(point_t));
+    point_t *point = malloc(sizeof(point_t));
     if (point == NULL || isspace((unsigned char)character))
     {
         return NULL;
@@ -513,7 +515,7 @@ void mapUpdate(grid_t *playerGrid, int playerRow, int PlayerColumn)
 
             if (!blocked)
             {
-                point_setTrack(current, true);
+                point_setVisibility(current, true);
                 if (goldHere > 0)
                 {
                     current->visibleGold = false;
@@ -545,7 +547,7 @@ void delete_grid(grid_t *grid)
 {
     for (int i = 0; i < grid->numRows; i++)
     {
-        for (int j = 0; j < grid_getNumCols; j++)
+        for (int j = 0; j < grid_getNumCols(grid); j++)
         {
             point_t *point = grid_get(grid, i, j);
             point_delete(point);
