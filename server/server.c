@@ -149,19 +149,19 @@ void parseArgs(const int argc, char* argv[], char** mapFile, char** seed) {
 
     //if too few arguments
     if (argc < 2) {
-        flog_v(stderr, "ERROR: too few arguments provided");
+        log_v( "ERROR: too few arguments provided");
         exit(1);
     }
 
     //if to many arguments
     if (argc > 3) {
-        flog_v(stderr, "ERROR: too many arguments provided");
+        log_v("ERROR: too many arguments provided");
         exit(2);
     }
 
     //if no mapFile provided
     if (argv[1] == NULL) {
-        flog_v(stderr, "ERROR: mapFile was not provided");
+        log_v("ERROR: mapFile was not provided");
         exit(3);
     }
 
@@ -171,7 +171,7 @@ void parseArgs(const int argc, char* argv[], char** mapFile, char** seed) {
     //checking if map can be opened/readable
     FILE* fp = fopen(*mapFile, "r"); 
     if (fp == NULL) {
-        flog_v(stderr, "ERROR: mapFile could not be opened");
+        log_v("ERROR: mapFile could not be opened");
         log_done();
         exit(4);
     }
@@ -218,7 +218,7 @@ int validateSeed(char* seed) {
 
     //if character is not a digit, it is an invalid seed
     if (isdigit(seed[i]) == 0) {
-      flog_v(stderr, "Invalid seed given");
+      log_v("Invalid seed given");
       exit(1);
     }
   }
@@ -239,13 +239,13 @@ int validateSeed(char* seed) {
 
 //creates a new game struct
 game_t* game_new(char* mapFile) {
-  flog_v(mapFile, "Starting new game");
+  log_v("Starting new game");
 
   game_t* game = malloc(sizeof(game_t));
 
   //check for memory error
   if (game == NULL) {
-    flog_v(stderr, "Game could not be initialized");
+    log_v("Game could not be initialized");
     return NULL;
   }
 
@@ -268,7 +268,7 @@ game_t* game_new(char* mapFile) {
   //check if map could be opened
   FILE* fp = fopen(mapFile, "r");
   if (fp = NULL) {
-    flog_v(stderr, "Game could not load map");
+    log_v("Game could not load map");
     exit(1);
   }
   
@@ -292,19 +292,19 @@ bool game_start(game_t* game) {
 
   //if port wasn't initialized
   if(port == 0) {
-    flog_v(stderr, "could not initialize port");
+    log_v("could not initialize port");
     return false;
   }
 
-  flog_v(port, "Server port: %d");
+  log_v("Server port: %d");
   bool isReceiving = message_loop(game, 0, NULL, NULL, processMessage);
   
   if (!isReceiving) {
-    flog_v(port, "message_loop failed");
+    log_v("message_loop failed");
     return false;
   }
 
-  flog_v(port, "message loop successful");
+  log_v("message loop successful");
   return true;
 }
 
@@ -453,7 +453,7 @@ player_t* player_new(char* username, game_t* game, addr_t playerAddress) {
     player_t* newPlayer = malloc(sizeof(player_t));
 
     if (newPlayer == NULL) {
-      flog_v(stderr, "Player could not be initialized");
+      log_v("Player could not be initialized");
     }
 
     if (message_isAddr(playerAddress)) {
@@ -486,7 +486,7 @@ player_t* player_new(char* username, game_t* game, addr_t playerAddress) {
     FILE* fp = fopen(game->mapFile, "r");
 
     if (fp == NULL) {
-      flog_v("Could not store grid in player struct");
+      log_v("Could not store grid in player struct");
       exit(1);
     } 
 
@@ -550,7 +550,7 @@ bool assignRandomSpot(player_t* player, game_t* game) {
       }
 
       else {
-        flog_v("Could not assign random spot for player");
+        log_v("Could not assign random spot for player");
       }
 
       //if spot wasn't assigned (x,y are still default 0,0)
@@ -568,7 +568,7 @@ player_t* findPlayerByAddress(game_t* game, addr_t addr) {
     
   //null checks
   if (game == NULL || addr == NULL) {
-    flog_v(stderr, "game or address passed in was null");
+    log_v("game or address passed in was null");
   }
 
   //loop through player array and find that player based on their address
@@ -589,7 +589,7 @@ player_t* findPlayerByLetter(game_t* game, char playerLetter) {
     
   //null check
   if (game == NULL) {
-    flog_v(stderr, "game is null");
+    log_v("game is null");
     return NULL;
   }
 
@@ -637,7 +637,7 @@ char* displayGame(game_t* game, addr_t fromClient) {
 
   //check if memory was allocated
   if (display == NULL) {
-    flog_v("Could not malloc string display to display game info");
+    log_v("Could not malloc string display to display game info");
     return NULL;
   }
   
@@ -839,12 +839,12 @@ static void processKeystroke(game_t* game, player_t* player, char* keyMessage) {
 
   //null check
   if (player == NULL) {
-    flog_v("Player passed into processKeystroke is NULL");
+    log_v("Player passed into processKeystroke is NULL");
     return;
   }
 
   if (keyMessage == NULL) {
-    flog_v("keyMessage passed into processKeystroke is NULL");
+    log_v("keyMessage passed into processKeystroke is NULL");
     return;
   }
 
@@ -860,11 +860,11 @@ static void processKeystroke(game_t* game, player_t* player, char* keyMessage) {
   bool keepMoving* = false;
 
   char keystroke = keyMessage[0];
-  flog_v("Processing player input...\n");
+  log_v("Processing player input...\n");
 
   //handle QUIT (q)
   if ((keystroke == 'Q')|| (keystroke == 'q')) {
-    flog_v("Player requested to quit. \n");
+    log_v("Player requested to quit. \n");
 
     message_send(player->port, "You have QUIT");
     return;
@@ -927,7 +927,7 @@ static void moveByKey(char key, int* dx, int* dy, bool* keepMoving) {
 
     //if invalid key
     default:
-      flog_v("Invalid input received.\n");
+      log_v("Invalid input received.\n");
       return;
   }
 }
