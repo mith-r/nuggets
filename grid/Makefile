@@ -1,6 +1,6 @@
 # Makefile for Grid Module
 
-OBJS = grid.o file.o 
+OBJS = grid.o file.o gridTest.o
 LIB = grid.a
 LIBS = -lm
 LLIBS = ../grid/grid.a
