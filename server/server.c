@@ -14,7 +14,6 @@
 #include "message.h"
 #include "grid.h"
 
-
 /*
  * player struct
  */
@@ -309,7 +308,6 @@ bool game_start(game_t* game) {
 }
 
 
-
 //handles messages to sent to server from client
 bool processMessage(void* arg, addr_t clientAddress, const char* message) {
 
@@ -449,13 +447,17 @@ player_t* player_new(char* username, game_t* game, addr_t playerAddress) {
 
   //check if under max players (26)
   if (game->totalPlayers < MaxPlayers) {
-
+    
+    //malloc size
     player_t* newPlayer = malloc(sizeof(player_t));
 
+    //check if memory was allocated
     if (newPlayer == NULL) {
-      log_v("Player could not be initialized");
+      log_v("ERROR: could not allocate memory for newPlayer");
+      return NULL;
     }
 
+    //if addresses matches
     if (message_isAddr(playerAddress)) {
       newPlayer->port = playerAddress;
     }
@@ -467,8 +469,7 @@ player_t* player_new(char* username, game_t* game, addr_t playerAddress) {
     newPlayer->username = malloc(sizeof(char)*strlen(username)+1);
     strcpy(newPlayer->username, username);
     newPlayer->purse = 0;
-    newPlayer->justCollected =0;
-
+    newPlayer->justCollected = 0;
 
     //assign an alphabetical letter to player
     char alphabet[26] = {'A','B','C','D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 
@@ -479,23 +480,33 @@ player_t* player_new(char* username, game_t* game, addr_t playerAddress) {
     char playerLetter = alphabet[numPlayers];
     newPlayer->letter = playerLetter;
 
-
     //allowing player to see map
-
     newPlayer->grid = NULL;
     FILE* fp = fopen(game->mapFile, "r");
 
+    //check if mapFile could be opened
     if (fp == NULL) {
       log_v("Could not store grid in player struct");
       exit(1);
-    } 
+    }
 
+    //give gold to player
+    assignGoldToPlayer(newPlayer, game);
 
-    //assign gold to map for player
+    //place the player at a random spot in the map
+    if (assignRandomSpot(newPlayer, game)) {
+        //updates the player's visability
+        mapUpdate(newPlayer->grid, newPlayer->x, newPlayer->y);
 
-    //assign player a random spot in the map to start out
+        //fullMap is updated to reflect player placed at that spot
+        point_t* globalPoint = grid_get(game->fullMap, newPlayer->x, newPlayer->y);
+        point_setPlayer(globalPoint, newPlayer->letter);
+    }
 
-
+    //add new player to player_array
+    game->player_array[game->totalPlayers] = newPlayer;
+    game->totalPlayers++;  //increment player count
+    return newPlayer; 
   }
 }
 
