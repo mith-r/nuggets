@@ -31,7 +31,7 @@
  int main(const int argc, char* argv[])
  {
     //Setting up map
-    FILE* fp = fopen(argv[1], "r");
+    FILE* fp = fopen("../maps/main.txt", "r");
     if (fp == NULL) {
         fprintf(stderr, "Could not read file\n");
     }
