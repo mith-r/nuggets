@@ -2,24 +2,22 @@
 # 
 
 OBJS = server.o
-LIBS = support
+LIBS = support/support.a
 
-CFLAGS = -Wall -pedantic -std=gnu11 -ggdb -I../libcs50 -I../common
+CFLAGS = -Wall -pedantic -std=gnu11 -ggdb -Isupport
 CC = gcc
 MAKE = make
 
 all: server
 
-server: $(OBJS)
+server: $(OBJS) $(LIBS)
 	$(CC) $(CFLAGS) $(OBJS) $(LIBS) -o server
 
 
 .PHONY: all test clean
 
-../common/common.a:
-	cd ../common
-	make clean
-	make
+support/support.a:
+	$(MAKE) -C support
 
 # test: servertest
 # 	chmod +x ./testing.sh
@@ -29,5 +27,5 @@ clean:
 	rm -rf *.dSYM  # MacOS debugger info
 	rm -f *~ *.o
 	rm -f server
-	rm -f client
+#rm -f client
 	rm -f core
