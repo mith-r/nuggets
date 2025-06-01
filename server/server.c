@@ -239,7 +239,7 @@ int validateSeed(char* seed) {
 
 //creates a new game struct
 game_t* game_new(char* mapFile) {
-  flog_v("Starting new game");
+  flog_v(mapFile, "Starting new game");
 
   game_t* game = malloc(sizeof(game_t));
 
@@ -259,7 +259,7 @@ game_t* game_new(char* mapFile) {
 
   game->totalPlayers = 0;
   game->goldRemaining = GoldTotal;
-  game->gold = 0;
+  game->totalGoldCollected = 0;
   game->mapFile = mapFile;
   game->spectator = message_noAddr();
   game->quitCount = 0;
@@ -296,15 +296,15 @@ bool game_start(game_t* game) {
     return false;
   }
 
-  flog_v("Server port: %d", port);
+  flog_v(port, "Server port: %d");
   bool isReceiving = message_loop(game, 0, NULL, NULL, processMessage);
   
   if (!isReceiving) {
-    flog_v("message_loop failed");
+    flog_v(port, "message_loop failed");
     return false;
   }
 
-  flog_v("message loop successful");
+  flog_v(port, "message loop successful");
   return true;
 }
 
@@ -318,7 +318,7 @@ bool processMessage(void* arg, addr_t clientAddress, const char* message) {
   //check if message received was "PLAY", create a new player
   if (strncmp(message, "PLAY ", strlen("PLAY ")) == 0) {
     const char* name = message + strlen("PLAY ");
-    player_t* player = player_new(name, game, from);
+    player_t* player = player_new(name, game, clientAddress);
 
     //if player is NULL, we reached max players
     if (player == NULL) {
@@ -326,7 +326,7 @@ bool processMessage(void* arg, addr_t clientAddress, const char* message) {
     }
 
     //if we haven't reached max players
-    if (game->totalPlayers < MaxPlayers || player ->id == 'Z') {
+    if (game->totalPlayers < MaxPlayers || player ->letter == 'Z') {
       //send ok message
       char ok_message[10];
       snprintf(ok_message, sizeof(ok_message), "OK %c", player->letter);
@@ -359,7 +359,7 @@ bool processMessage(void* arg, addr_t clientAddress, const char* message) {
 
     //if sender is a player, handle movement key
     else {
-      log_s("Message: %s\n, key");
+      log_s("Message: %s\n", key);
       //find player by their address
       player_t* player = findPlayerByAddress(game, clientAddress);
 
@@ -384,7 +384,7 @@ bool processMessage(void* arg, addr_t clientAddress, const char* message) {
   }
 
   //handle end of game conditions
-  if (game->goldLeft == 0 || (game->quitCount == game->totalPlayers && game->quitCount > 0)) {
+  if (game->goldRemaining == 0 || (game->quitCount == game->totalPlayers && game->quitCount > 0)) {
     return true; //game is over
   }
   else {
@@ -457,17 +457,17 @@ player_t* player_new(char* username, game_t* game, addr_t playerAddress) {
     }
 
     if (message_isAddr(playerAddress)) {
-      player->port = playerAddress;
+      newPlayer->port = playerAddress;
     }
 
     else {
-      player->port = message_noAddr();
+      newPlayer->port = message_noAddr();
     }
 
-    player->username = malloc(sizeof(char)*strlen(username)+1);
-    snprintf(username, fullname);
-    player->purse = 0;
-    player->justCollected =0;
+    newPlayer->username = malloc(sizeof(char)*strlen(username)+1);
+    strcpy(newPlayer->username, username);
+    newPlayer->purse = 0;
+    newPlayer->justCollected =0;
 
 
     //assign an alphabetical letter to player
@@ -476,13 +476,13 @@ player_t* player_new(char* username, game_t* game, addr_t playerAddress) {
                         'T', 'U', 'V', 'W', 'X', 'Y', 'Z'};
     //the letter assigned to the player will be based on the order they join game
     int numPlayers = game->totalPlayers;
-    char playerLetter = alphabet[totalPlayers];
+    char playerLetter = alphabet[numPlayers];
     newPlayer->letter = playerLetter;
 
 
     //allowing player to see map
 
-    player->grid = NULL;
+    newPlayer->grid = NULL;
     FILE* fp = fopen(game->mapFile, "r");
 
     if (fp == NULL) {
@@ -511,7 +511,7 @@ void assignGoldToPlayer(player_t* player, game_t* game) {
         //if there was gold at that spot, give it to a player and remove it after collected
         if (amountGold > 0) {
           point_t* localPoint = grid_get(player->grid, i, j);
-          point_setGold(localPoint, amount);
+          point_setNuggets(localPoint, amountGold);
           grid_insert(player->grid, localPoint, i, j);
         }
     }
