@@ -565,11 +565,6 @@ bool assignRandomSpot(player_t* player, game_t* game) {
 
 //finds player by address
 player_t* findPlayerByAddress(game_t* game, addr_t addr) {
-    
-  //null checks
-  if (game == NULL || addr == NULL) {
-    log_v("game or address passed in was null");
-  }
 
   //loop through player array and find that player based on their address
   for (int i =0; i<game->totalPlayers; i++) {
@@ -633,7 +628,7 @@ char* displayGame(game_t* game, addr_t fromClient) {
 
   
   //string display will represent/display the entire game at that current moment
-  char* display = malloc(sizeof(char)*(total+1));
+  char* display = malloc((totalSpaces+1));
 
   //check if memory was allocated
   if (display == NULL) {
@@ -648,8 +643,8 @@ char* displayGame(game_t* game, addr_t fromClient) {
     for (int j = 0; j<numCols; j++) {
       
       point_t* globalPoint = grid_get(fullGrid, i, j);
-
-      char mapSymbol = ' ';
+      char* playerLetter;
+      char* mapSymbol = ' ';
 
       //if client is a player (not spectator) display local grid
       if (!isSpectator) {
@@ -671,12 +666,12 @@ char* displayGame(game_t* game, addr_t fromClient) {
 
           //else if gold is visible to the player
           else if (point_getGold(globalPoint)) {
-            symbol = '*';
+            mapSymbol = '*';
           }
 
           //otherwise show terrain of map based on point's local value
           else {
-            symbol = pointValToChar(point_getVal(localPoint));
+            mapSymbol = pointValToChar(point_getVal(localPoint));
           }
         }
       
@@ -719,7 +714,7 @@ char* displayGame(game_t* game, addr_t fromClient) {
       }
 
     //add new line to end of each row
-    strcat(output, "\n"); 
+    strcat(display, "\n"); 
   }
   return display;
 }
@@ -774,17 +769,17 @@ static bool movePlayer(game_t* game, player_t* player, int currX, int currY, int
     int numGold = point_getGold(newGlobalPoint);
 
     //if there is gold at that point, player collects it
-    if (gold > 0) {
+    if (numGold > 0) {
 
       //update player's purse and justCollected gold
-      player->purse += gold;
-      player->justCollected = gold;
+      player->purse += numGold;
+      player->justCollected = numGold;
 
       //update game's goldCollected and goldRemaining variables
-      game->goldCollected += gold;
-      game->goldRemaining = GoldTotal - game->goldCollected;
+      game->totalGoldCollected += numGold;
+      game->goldRemaining = GoldTotal - game->totalGoldCollected;
       
-      goldCollected += gold;
+      game->totalGoldCollected += numGold;
       point_setGold(newGlobalPoint, 0);
     }
 
@@ -853,11 +848,11 @@ static void processKeystroke(game_t* game, player_t* player, char* keyMessage) {
   int currY = player->y;
 
   //dx, dy -> distance player will move by
-  int* dx = 0;
-  int* dy = 0;
+  int dx = 0;
+  int dy = 0;
 
   //if uppercase key pressed, we want to keep moving until we can't
-  bool keepMoving* = false;
+  bool keepMoving = false;
 
   char keystroke = keyMessage[0];
   log_v("Processing player input...\n");
@@ -901,7 +896,7 @@ static void processKeystroke(game_t* game, player_t* player, char* keyMessage) {
 static void moveByKey(char key, int* dx, int* dy, bool* keepMoving) {
   *dx = 0;
   *dy = 0;
-  **keepMoving = false;
+  *keepMoving = false;
 
   switch (key) {
     //lower case keystrokes
@@ -923,7 +918,7 @@ static void moveByKey(char key, int* dx, int* dy, bool* keepMoving) {
     case 'Y': *dx = -1; *dy= -1; *keepMoving = true; return;  //move diagonally up and left, if possible
     case 'U': *dx = 1; *dy = 1;  *keepMoving = true; return;  //move diagonally up and right, if possible
     case 'B': *dx = -1; *dy = -1;  *keepMoving = true; return;   //move diagonally down and left, if possible
-    case 'N': *dx = 1; **dy = -1;  *keepMoving = true; return;   //move diagonally down and right, if possible
+    case 'N': *dx = 1; *dy = -1;  *keepMoving = true; return;   //move diagonally down and right, if possible
 
     //if invalid key
     default:
@@ -939,12 +934,6 @@ static void moveByKey(char key, int* dx, int* dy, bool* keepMoving) {
  */
 static void game_spectate(game_t* game, addr_t clientAddress) {
 
-  //NULL checks
-  if (game == NULL || clientAddress == NULL) {
-    log_e("ERROR: game or clientAddress passed into game_spectate is NULL");
-    return;
-  }
-
   //currentSpectator of the game if there is one
   addr_t currentSpectator = game->spectator;
 
@@ -954,7 +943,7 @@ static void game_spectate(game_t* game, addr_t clientAddress) {
   if (!message_eqAddr(currentSpectator, clientAddress)) {
 
     //if there is a current spectator, notify them and kick (false means there is a current spectator)
-    if (!message_eqAddr(currentSpectator, message_noAddr)) {
+    if (!message_eqAddr(currentSpectator, message_noAddr())) {
       message_send(currentSpectator, "QUIT You have been replaced by a new spectator.");
     }
 
@@ -977,8 +966,8 @@ static void game_spectate(game_t* game, addr_t clientAddress) {
     log_e("ERROR: memory could not be allocated for gold_message in game_spectate");
   }
 
-  snprintf(gold_message, sizeof(goldMessage), "GOLD 0 0 %d", goldLeft);
-  message_send(clientAddress, goldMessage);
+  snprintf(gold_message, sizeof(gold_message), "GOLD 0 0 %d", goldLeft);
+  message_send(clientAddress, gold_message);
 
 
   // Sending the GRID message
@@ -1020,7 +1009,7 @@ static void game_end(game_t* game) {
 
   //table summary of game results
   size_t* summary_size = 1000;
-  char* game_summary = calloc(1, summary_size*sizeof(char));
+  char* game_summary = calloc(1, summary_size);
   
   //check if memory was allocated
   if (game_summary == NULL) {
@@ -1084,7 +1073,7 @@ static void player_delete(player_t* player, game_t* game) {
   for (int i = 0; i<game->totalPlayers; i++) {
 
     //if the player_array exists and player[i]'s letter matches player Letter
-    if(game->player_array[i] != NULL && game->player_array[i]->playerLetter == player->letter) {
+    if(game->player_array[i] != NULL && game->player_array[i]->letter == player->letter) {
       game->player_array[i] = NULL;  //set pointer to NULL
       break;
     }
@@ -1092,7 +1081,7 @@ static void player_delete(player_t* player, game_t* game) {
 
   //free memory
   delete_grid(player->grid);
-  free(player->name);
+  free(player->username);
   free(player);
 }
 
