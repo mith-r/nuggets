@@ -3,7 +3,7 @@
  *
  * See grid.c for implementation
  * Mithun Rameshkumar, Gustavo Lopez-Fleming, Tarini Gupta, Benjamin Lin
- * 
+ *
  * May 2025
  */
 
@@ -65,7 +65,7 @@ void point_setVal(point_t *point, int val);
 
 /**************** point_getChar ****************/
 /*Return the character at the point given */
-int point_getChar(point_t *point);
+char point_getChar(point_t *point);
 
 /**************** point_getVisibility ****************/
 /*Return whether the player can see the given point*/
