@@ -1,24 +1,23 @@
 # Makefile for Grid Module
 
-OBJS = grid.o file.o gridTest.o
-LIB = grid.a
-LIBS = -lm
-LLIBS = ../grid/grid.a
-
 CC = gcc
-CFLAGS = -Wall -pedantic -std=c11 -ggdb -I$L -c
+CFLAGS = -Wall -pedantic -std=c11 -ggdb -I
 
-$(LIB): $(OBJS)
-	ar cr $(LIB) $(OBJS)
+OBJS = grid.o file.o 
+TEST_OBJS = gridTest.o
 
-grid.o: grid.h
-file.o: file.h
+grid.a: $(OBJS)
+	ar cr grid.a $(OBJS)
+
+grid.Test: $(OBJS) $(TEST_OBJS)
+	$(CC) $(CFLAGS) -o gridTest $(OBJS) $(TEST_OBJS) -lm
+
+%.o: %.c
+	$(CC) $(CFLAGS) -c $<
 
 .PHONY: all clean
 
-all: grid
+all: grid.a gridTest
 
 clean:
-	rm -rf *.dSYM  # MacOS debugger info
-	rm -f *~ *.o
-	rm -f core
+	rm -f *.o grid.a gridTest
