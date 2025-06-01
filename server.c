@@ -11,13 +11,14 @@
 #include "log.h"
 #include "message.h"
 
+
 #include "client.h"
 #include "grid.h"
 
 
 //function prototypes
 game_t* game_new(char* mapFile);
-void game_start(game_t* game);
+bool game_start(game_t* game);
 void parseArgs(const int argc, char* argv[], char** mapFile, char** seed);
 int validateSeed(char* seed);
 player_t* player_new(char* username, game_t* game, addr_t playerAddress);
@@ -27,6 +28,15 @@ player_t* findPlayerByAddress(game_t* game, addr_t addr);
 player_t* findPlayerByLetter(game_t* game, char playerLetter);
 static char pointValToChar(int pointVal)
 char* displayGame(game_t* game, addr_t fromClient);
+
+
+static void sendGridMessage(game_t* game, addr_t to);
+static void sendGoldMessage(int goldCollected, int purse, int goldRemaining, addr_t to);
+static void sendDisplayMessage(game_t* game, addr_t to);
+
+
+
+
 
 static void game_spectate(game_t* game, addr_t clientAddress);
 static void game_end(game_t* game);
@@ -53,8 +63,8 @@ typedef struct game {
   addr_t spectator;     //address of the spectator
   char letter;          //letter of player (A-Z)
   const char* mapFile;
-  int mapRows;
-  int mapCols;
+  int goldRemaining;
+  int totalGoldCollected;
   int totalPlayers;
   int quitCount;
 } game_t;
@@ -226,9 +236,6 @@ int validateSeed(char* seed) {
 
 
 
-
-
-
 //creates a new game struct
 game_t* game_new(char* mapFile) {
   flog_v("Starting new game");
@@ -241,184 +248,198 @@ game_t* game_new(char* mapFile) {
     return NULL;
   }
 
-  player_t* player_array = malloc(sizeof(player_t*));
+  player_t** player_array = malloc(sizeof(player_t)*MaxPlayers);
   game->player_array = player_array;
 
-  //instantitate array of players (max is 26, 1 more for spectator)
-  for (int i = 0; i<27; i++) {
+  //instantitate array of players, all null initially
+  for (int i = 0; i<MaxPlayers; i++) {
     game->player_array[i] = NULL;
   }
 
   game->totalPlayers = 0;
-  game->goldRemaining = 0;
+  game->goldRemaining = GoldTotal;
+  game->gold = 0;
+  game->mapFile = mapFile;
+  game->spectator = message_noAddr();
+  game->quitCount = 0;
   
-
-  FILE* fp = fopen(mapFile, "r");
+  
   //check if map could be opened
+  FILE* fp = fopen(mapFile, "r");
   if (fp = NULL) {
-    flog_v(stderr, "game could not load map");
+    flog_v(stderr, "Game could not load map");
     exit(1);
   }
-
-  game->mapFile = mapFile;
   
-  //initialize the map if it's valid
-  //create random number of piles
-  //create total gold for all players
+  log_v("Initializing mapFile");
+  game->mapFile = initializeMap(mapFile);
+
+  log_v("Randomizing number of piles");
+  randomizeGold(game->fullMap, GoldMinNumPiles, GoldMaxNumPiles, GoldTotal);
+
+  fclose(fp);
   return game;
 }
 
 
 
 
-
 //starts the game and listens for incoming messages
-void game_start(game_t* game) {
+bool game_start(game_t* game) {
 
   int port = message_init(NULL);  //set port to port that was messaged
 
   //if port wasn't initialized
   if(port == 0) {
     flog_v(stderr, "could not initialize port");
-    exit(1);
+    return false;
   }
 
   flog_v("Server port: %d", port);
-  bool isReceiving = message_loop(game, 0, NULL, NULL, handle_message);
+  bool isReceiving = message_loop(game, 0, NULL, NULL, processMessage);
   
   if (!isReceiving) {
     flog_v("message_loop failed");
-    exit(2)
+    return false;
   }
 
   flog_v("message loop successful");
-  return;
+  return true;
 }
 
 
 
 //handles messages to sent to server from client
-bool processMessage(void* arg, addr_t fromClient, const char* message) {
+bool processMessage(void* arg, addr_t clientAddress, const char* message) {
 
   game_t* game = (game_t*)arg;
-  char* messageCopy = strdup(message);
-  char* messageType;
-  char* remainingMessage;
 
-  //handle_message based on the messageType received
+  //check if message received was "PLAY", create a new player
+  if (strncmp(message, "PLAY ", strlen("PLAY ")) == 0) {
+    const char* name = message + strlen("PLAY ");
+    player_t* player = player_new(name, game, from);
 
-  //if PLAY message was sent, create a new player
-  if (strncmp(messageType, "PLAY ", strlen("PLAY ")) == 0){
-   
-    player_t* newPlayer = player_new(remainingMessage, game, fromClient);
-
-
-    //check if memory could be allocated for new player
-    if(player == NULL) {
-      fprintf(stderr, "Max players exceeded");
+    //if player is NULL, we reached max players
+    if (player == NULL) {
+      log_v("Max players exceeded in processMessage");
     }
 
-    //if less than max players
-    if (game->totalPlayers < MAX_PLAYERS || player->letter=='Z') {
-      
-      //array of size 2 to store player letter (null terminating char at end)
-      char playerLetter[2] = {newPlayer->letter, '\0'};
-   
-      // send the OK message back to the client
-      //malloc'ing for OK, playerLetter, and null terminating char
-      char* ok_message = malloc(strlen("OK") +2 );
-      
-      //check if memory was allocated
-      if (ok_message == NULL) {
-        log_v("Malloc failed for OK message");
-        free(message_copy);
-        return false;
-      }
+    //if we haven't reached max players
+    if (game->totalPlayers < MaxPlayers || player ->id == 'Z') {
+      //send ok message
+      char ok_message[10];
+      snprintf(ok_message, sizeof(ok_message), "OK %c", player->letter);
+      message_send(clientAddress, ok_message);
 
-      //append the "OK" message to the message that we want to send to client
-      strcpy(ok_msg, "OK");
-      strcat(ok_msg, playerLetter);
-      message_send(fromClient, ok);  //sending the message
-    
-
-      // create and send the GRID message
-
-      //finding number of digits so we can dynamically allocate memory for GRID message
-      char* numRows; char* numCols;
-      int numRowDigits = snprintf(NULL, 0,"%d", numRows);
-      int numColDigits = snprintf(NULL, 0, "%d", numCols);
-      int bufferSize = 5 + numRowDigits + 1 + numColDigits+ 1; // GRID + space + rows + cols + '\0'
-      char *grid_message = malloc(bufferSize);
-
-     //check if memory was allocated
-     if (grid_message == NULL) {
-      log_v("Malloc failed for GRID message");
-      return false;
-     }
-
-     //concatenating the grid message and sending it to the client
-     sprintf(grid_message, "GRID %d %d", numRows, numCols);
-     message_send(fromClient, grid_mssage);
-     free(grid_message);
-
-
-     // sending the GOLD message to client
-     int goldLeft = game->goldRemaining;
-     
-     char* gold_message = malloc(sizeof(char)*20);  //allocating 20 bytes for now
-     snprintf(goldMessage, "GOLD %d %d %d", goldLeft);
-     message_send(fromClient, gold_message);
-     free(gold_message);
-
-    // sending the DISPLAY message to client
-    char* display_message;
-    message_send(fromClient, displayMessage);
-    free(display_message);
-
+      //send GRID, GOLD, DISPLAY messages
+      sendGridMessage(game, clientAddress);
+      sendGoldMessage(0, 0, game->goldRemaining, clientAddress);
+      sendDisplayMessage(game, clientAddress);
     }
   }
 
+  //if the message was KEY
+  else if (strncmp(message, "KEY ", strlen("KEY ")) == 0) {
+    const char* key = message + strlen("KEY ");
 
-  //checking key pressed by client
-  else if (strcmp(messageType, "KEY")==0) {
-
-    //if the key is from the spectator, send QUIT message
-    if(message_eqAddr(game->spectator, fromClient)) {
-
-      //if key pressed was Q, have spectator quit
-      if (strcmp(messageRemaining, "Q") == 0 || strcmp(messageRemaining, "q"))) {
-        message_send(fromClient, "QUIT spectating ended");
-        game->spectator = message_noAddr();  //removing the spectator from server
+    //if the the SPECTATOR pressed quit ("Q", "q")
+    if (message_eqAddr(game->spectator, clientAddress)) {
+      if (strcmp(key, "Q") == 0 || strcmp(key, "q") == 0) {
+        //Notify spectator and clear them from game
+        message_send(clientAddress, "QUIT Thanks for watching!");
+        game->spectator = message_noAddr();
       }
 
-      //else allow spectator to continue spectating
-      else {
-          if(!message_eqAdrr(game->spectator, message_noAddr())) {
-            spectate(game, game->spectator);
-          }
+      //else allow them to continue spectating and refresh their view
+      else if (!message_eqAddr(game->spectator, message_noAddr())) {
+        game_spectate(game, game->spectator);
       }
+    }
 
-    //else handle key movements
-    //ADD MORE HERE
-    //add function to read message
-    
+    //if sender is a player, handle movement key
+    else {
+      log_s("Message: %s\n, key");
+      //find player by their address
+      player_t* player = findPlayerByAddress(game, clientAddress);
 
-      else {
-        flog_v("Message: %s", remainingMessage);
+      if (player != NULL) {
+        processKeystroke(game, player, key);  //process the player's keystrokes/movement
+        sendGoldMessage(player->justCollected, player->purse, game->goldRemaining, clientAddress);
+        sendDisplayMessage(game, clientAddress);
 
-        //find player 
-        player_t* player = findPlayerByAddress(game, fromClient);
-
-        if (player == NULL) {
-          flog_v(stderr, "player could not be found");
-          exit(1);
+        //update the display for current spectator if there is any
+        if (!message_eqAddr(game->spectator, message_noAddr())) {
+          spectate(game, game->spectator);
         }
-
-      
+      }
     }
+  }
 
+  //handle SPECTATE message
+
+  else if (strncmp(message, "SPECTATE", strlen("SPECTATE")) == 0) {
+    //add or update spectator in the game
+    game_spectate(game, clientAddress);
+  }
+
+  //handle end of game conditions
+  if (game->goldLeft == 0 || (game->quitCount == game->totalPlayers && game->quitCount > 0)) {
+    return true; //game is over
+  }
+  else {
+    return false;  //continue game loop
+  }
 }
-    }
+
+
+
+/*
+ * Helper function for processMessage that sends gridMessage
+ */
+static void sendGridMessage(game_t* game, addr_t to) {
+
+  //getting numRows and numCols
+  int numRows = grid_getNumRows(game->fullMap);
+  int numCols = grid_getNumCols(game->fullMap);
+
+  //finding number of digits so we can dynamically allocate memory for GRID message
+  char* numRows; char* numCols;
+  int numRowDigits = snprintf(NULL, 0,"%d", numRows);
+  int numColDigits = snprintf(NULL, 0, "%d", numCols);
+
+  int bufferSize = 5 + numRowDigits + 1 + numColDigits+ 1; // GRID + space + rows + cols + '\0'
+  char *grid_message = malloc(bufferSize);
+
+  //check if memory was allocated
+  if (grid_message == NULL) {
+    log_v("Malloc failed for GRID message");
+    return;
+  }
+  
+  snprintf(grid_message, bufferSize, "GRID %d, %d", numRows, numCols);
+  message_send(to, grid_message);
+  free(grid_message);
+}
+
+
+/*
+ * Helper function for processMessage that sends goldMessage
+ */
+static void sendGoldMessage(int goldCollected, int purse, int goldRemaining, addr_t to) {
+  char buffer[30];
+  snprintf(buffer, sizeof(buffer), "GOLD %d %d %d", goldCollected, purse, goldRemaining);
+  message_send(to, buffer);
+}
+
+/*
+ * Helper function for processMessage that sends displayMessage
+ */
+static void sendDisplayMessage(game_t* game, addr_t to) {
+  char* displayMessage = displayGame(game, to);
+  if (displayMessage != NULL) {
+    message_send(to, displayMessage);
+    free(displayMessage);
+  }
 }
 
 
@@ -426,7 +447,7 @@ bool processMessage(void* arg, addr_t fromClient, const char* message) {
 player_t* player_new(char* username, game_t* game, addr_t playerAddress) {
 
   //check if under max players (26)
-  if (game->totalPlayers < MAX_PLAYERS) {
+  if (game->totalPlayers < MaxPlayers) {
 
     player_t* newPlayer = malloc(sizeof(player_t));
 
@@ -930,7 +951,7 @@ static void game_spectate(game_t* game, addr_t clientAddress) {
 
     //if there is a current spectator, notify them and kick (false means there is a current spectator)
     if (!message_eqAddr(currentSpectator, message_noAddr)) {
-      message_send(currentSpectator, "QUIT A new spectator has replaced you");
+      message_send(currentSpectator, "QUIT You have been replaced by a new spectator.");
     }
 
     game->spectator = clientAddress; //assign new spectator as client
