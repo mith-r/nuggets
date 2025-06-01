@@ -1,10 +1,10 @@
 /*
  * grid.c - CS50 - grid module for final projection
  *
- * Implements 'grid.h' 
- * 
- * Gustavo Lopez-Fleming, Tarini Gupta, Benjamin Lin, Mithun Rameshkumar
- * 
+ * Implements 'grid.h'
+ *
+ * Gustavo Lopez-Fleming, Tarini Gupta, Benjamin Lin, Mithun Rameshkuman
+ *
  * May 2025
  */
 
@@ -13,8 +13,9 @@
 #include <string.h>
 #include <stdbool.h>
 #include <ctype.h>
+#include "file.h"
 
-typedef struct cell
+typedef struct point
 {                      // represents a single cell on the grid
     char character;    // Character on the map (.,#,-, etc.)
     char playerLetter; // player letter (A, B, ...)
@@ -35,14 +36,16 @@ typedef struct grid
 
 /**************** grid_new ****************/
 /* See grid.h for more info */
-grid_t* grid_new()
+grid_t *grid_new()
 {
-    grid_t* grid = malloc_(sizeof(grid_t));
+    grid_t *grid = malloc_(sizeof(grid_t));
 
-    if (grid == NULL) {
+    if (grid == NULL)
+    {
         return NULL;
     }
-    else {
+    else
+    {
         return grid;
     }
 }
@@ -79,7 +82,8 @@ int grid_getNumCols(grid_t *grid)
 /*See grid.h for more info*/
 int grid_setNumRows(grid_t *grid, int numRows)
 {
-    if (grid != NULL) {
+    if (grid != NULL)
+    {
         grid->numRows = numRows;
     }
 }
@@ -88,7 +92,8 @@ int grid_setNumRows(grid_t *grid, int numRows)
 /*See grid.h for more info*/
 int grid_setNumCols(grid_t *grid, int numCols)
 {
-    if (grid != NULL){
+    if (grid != NULL)
+    {
         grid->numCols = numCols;
     }
 }
@@ -99,12 +104,13 @@ int grid_setNumCols(grid_t *grid, int numCols)
 /*See grid.h for more info*/
 point_t *point_new(char character)
 {
-    point_t* point = malloc_as(sizeof(point_t));
-    if (point == NULL || isspace((unsigned char)character)){ 
+    point_t *point = malloc_as(sizeof(point_t));
+    if (point == NULL || isspace((unsigned char)character))
+    {
         return NULL;
     }
 
-    //Set defaults
+    // Set defaults
     point->character = character;
     point->playerLetter = ' ';
     point->nuggetCount = 0;
@@ -113,13 +119,13 @@ point_t *point_new(char character)
     return point;
 }
 
-
 /**************** point_getVal ****************/
 /*See grid.h for more info*/
 int point_getVal(point_t *point)
 {
-    if (point == NULL){
-        return '\0';
+    if (point == NULL)
+    {
+        return 0;
     }
 
     return point->val;
@@ -129,7 +135,8 @@ int point_getVal(point_t *point)
 /*See grid.h for more info*/
 void point_setVal(point_t *point, int val)
 {
-    if (point == NULL){
+    if (point == NULL)
+    {
         return;
     }
 
@@ -138,12 +145,411 @@ void point_setVal(point_t *point, int val)
 
 /**************** point_getChar ****************/
 /*See grid.h for more info*/
-int point_getChar(point_t *point);
+char point_getChar(point_t *point)
+{
+    if (point != NULL)
+    {
+        return point->character;
+    }
+    else
+    {
+        return '\0';
+    }
+}
 
 /**************** point_getVisibility ****************/
 /*See grid.h for more info*/
-bool point_getVisibility(point_t *point);
+bool point_getVisibility(point_t *point)
+{
+    if (point != NULL)
+    {
+        return point->isVisible;
+    }
+    else
+    {
+        return NULL;
+    }
+}
 
 /**************** point_setVisibility ****************/
 /*See grid.h for more info*/
-void point_setVisibility(point_t *point, bool isVisible);
+void point_setVisibility(point_t *point, bool isVisible)
+{
+    if (point != NULL)
+    {
+        point->isVisible = isVisible;
+    }
+}
+
+/**************** point_getplayerLetter ****************/
+/*Return the character of the player at the specified point*/
+char point_getPlayer(point_t *point)
+{
+    if (point != NULL)
+    {
+        return point->playerLetter;
+    }
+    return ' ';
+}
+
+/**************** point_setplayerLetter ****************/
+/*Set the character of the player at the specified point*/
+void point_setPlayer(point_t *point, char playerLetter)
+{
+    if (point != NULL)
+    {
+        point->playerLetter = playerLetter;
+    }
+}
+
+/**************** point_getNuggets ****************/
+/*Get number of nuggets at a specified point*/
+int point_getNuggets(point_t *point)
+{
+    if (point != NULL)
+    {
+        return point->nuggetCount;
+    }
+    return 0;
+}
+
+/**************** point_setNuggets ****************/
+/*set number of nuggets at a specified point*/
+void point_setNuggets(point_t *point, int count)
+{
+    if (point != NULL)
+    {
+        point->nuggetCount = count;
+    }
+}
+
+/**************** initializeMap ****************/
+/*Parse the given map.txt file to build the grid */
+grid_t *initializeMap(FILE *fp)
+{
+
+    grid_t *grid = grid_new();
+
+    char *line;
+    int numRows = 0;
+    numRows = file_numLines(fp);
+    int numCols = 0;
+    int track_cols = 0;
+
+    for (int i = 0; i < numRows; i++)
+    {
+        line = file_readLine(fp);
+        char *chars = line;
+        while (*chars != '\0')
+        {
+            point_t *point = point_new(chars[0]);
+
+            if (*chars == ' ')
+            {
+                point_setVal(point, 0);
+            }
+
+            else if (*chars == '.')
+            {
+                point_setVal(point, 1);
+            }
+
+            else if (*chars == '-')
+            {
+                point_setVal(point, 2);
+            }
+
+            else if (*chars == '#')
+            {
+                point_setVal(point, 3);
+            }
+
+            else if (*chars == '+')
+            {
+                point_setVal(point, 4);
+            }
+
+            else if (*chars == '|')
+            {
+                point_setVal(point, 5);
+            }
+            grid_insert(grid, point, i, track_cols);
+            chars++;
+            track_cols++;
+        }
+
+        if (numCols == 0)
+        {
+            numCols = track_cols;
+        }
+
+        free(line);
+        track_cols = 0;
+    }
+
+    grid_setNumCols(grid, numCols);
+    grid_setNumRows(grid, numRows);
+
+    return grid;
+}
+
+/**************** randomizeGold ****************/
+/*Distribute gold randomly across the map*/
+void randomizeGold(grid_t *grid, int minPiles, int maxPiles, int totalGold)
+{
+
+    srand(time(NULL)); // seed random number generator
+
+    int pileCount = (rand() % (maxPiles - minPiles)) + minPiles;
+    int pilesRemaining = pileCount;
+    int unassignedGold = totalGold;
+
+    int rows = grid_getNumRows(grid);
+    int cols = grid_getNumCols(grid);
+
+    for (int pileIndex = 0; pileIndex < pileCount; pileIndex++)
+    {
+        int currentGold;
+
+        // Assign remaining gold to the final pile
+        if (pileIndex == pileCount - 1)
+        {
+            currentGold = unassignedGold;
+        }
+        // Otherwise assign a random amount of gold
+        else
+        {
+            if (unassignedGold == 1)
+            {
+                currentGold = 1;
+            }
+            else
+            {
+                currentGold = (rand() % (unassignedGold - pilesRemaining)) + 1;
+            }
+        }
+
+        bool searching = true;
+        int randRow, randCol;
+
+        // Find a valid empty room spot with no gold
+        while (searching)
+        {
+            randRow = rand() % (rows - 1);
+            randCol = rand() % (cols - 1);
+
+            point_t *candidate = grid_get(grid, randRow, randCol);
+            int type = point_getVal(candidate);
+            int goldHere = point_getNuggets(candidate);
+
+            if (type == 1 && goldHere == 0)
+            {
+                point_setNuggets(candidate, currentGold);
+                grid_insert(grid, candidate, randRow, randCol);
+                searching = false;
+            }
+        }
+
+        unassignedGold -= currentGold;
+        pilesRemaining--;
+
+        if (unassignedGold == 0)
+        {
+            break;
+        }
+    }
+}
+
+/****************  mapUpdate ****************/
+/*Consistent update of what is visible to the player given their location*/
+void mapUpdate(grid_t *playerGrid, int playerRow, int PlayerColumn)
+{
+
+    int totalRows = grid_getNumRows(playerGrid);
+    int totalCols = grid_getNumCols(playerGrid);
+    point_t *origin = grid_get(playerGrid, playerRow, PlayerColumn);
+
+    // If the player is on a passage, reveal it and any adjacent passages
+    int originType = point_getVal(origin);
+
+    if (originType == 3)
+    {
+        point_setVisibility(origin, true);
+        grid_insert(playerGrid, origin, playerRow, PlayerColumn);
+
+        point_t *up = grid_get(playerGrid, playerRow - 1, PlayerColumn);
+        if (point_getVal(up) == 3)
+        {
+            point_setVisibility(up, true);
+            grid_insert(playerGrid, up, playerRow - 1, PlayerColumn);
+        }
+
+        point_t *down = grid_get(playerGrid, playerRow + 1, PlayerColumn);
+        if (point_getVal(down) == 3)
+        {
+            point_setVisibility(down, true);
+            grid_insert(playerGrid, down, playerRow + 1, PlayerColumn);
+        }
+
+        point_t *left = grid_get(playerGrid, playerRow, PlayerColumn - 1);
+        if (point_getVal(left) == 3)
+        {
+            point_setVisibility(left, true);
+            grid_insert(playerGrid, left, playerRow, PlayerColumn - 1);
+        }
+
+        point_t *right = grid_get(playerGrid, playerRow, PlayerColumn + 1);
+        if (point_getVal(right) == 3)
+        {
+            point_setVisibility(right, true);
+            grid_insert(playerGrid, right, playerRow, PlayerColumn + 1);
+        }
+    }
+
+    // For each point on the map, determine if it's visible from the player's location
+    for (int row = 0; row < totalRows; row++)
+    {
+        for (int col = 0; col < totalCols; col++)
+        {
+            point_t *current = grid_get(playerGrid, row, col);
+
+            bool wasVisible = point_getVisibility(current);
+            int goldHere = point_getNuggets(current);
+
+            if (wasVisible && goldHere == 0)
+            {
+                grid_insert(playerGrid, current, row, col);
+                continue;
+            }
+
+            int type = point_getVal(current);
+            if (type == 0)
+                continue; // skip solid rock
+
+            bool blocked = false;
+            int rowDelta = abs(playerRow - row);
+            int colDelta = abs(PlayerColumn - col);
+            int rStart, rEnd, cStart, cEnd;
+
+            if (playerRow == row)
+            {
+                cStart = (PlayerColumn < col) ? PlayerColumn + 1 : col + 1;
+                cEnd = (PlayerColumn < col) ? col : PlayerColumn;
+
+                for (int x = cStart; x < cEnd; x++)
+                {
+                    int terrain = point_getVal(grid_get(playerGrid, row, x));
+                    if (terrain == 0 || terrain == 2 || terrain == 3 || terrain == 4 || terrain == 5)
+                    {
+                        blocked = true;
+                        break;
+                    }
+                }
+            }
+            else if (rowDelta >= 1)
+            {
+                cStart = (PlayerColumn < col) ? PlayerColumn + 1 : col + 1;
+                cEnd = (PlayerColumn < col) ? col : PlayerColumn;
+
+                for (int x = cStart; x < cEnd; x++)
+                {
+                    int terrain1 = point_getVal(grid_get(playerGrid, row, x));
+                    int terrain2 = point_getVal(grid_get(playerGrid, playerRow, x));
+                    if (terrain1 == 0 || terrain1 == 3 || terrain1 == 4 ||
+                        terrain2 == 0 || terrain2 == 3 || terrain2 == 4)
+                    {
+                        blocked = true;
+                        break;
+                    }
+                }
+            }
+
+            if (rowDelta > 1)
+            {
+                rStart = (playerRow < row) ? playerRow + 1 : row + 1;
+                rEnd = (playerRow < row) ? row : playerRow;
+                int steps = 0;
+
+                for (int r = rStart; r < rEnd; r++)
+                {
+                    steps++;
+                    double slopeCol;
+                    if (colDelta == 0)
+                    {
+                        slopeCol = col;
+                    }
+                    else
+                    {
+                        double slope = (double)colDelta / (double)rowDelta;
+                        slopeCol = (PlayerColumn > col) ? (slope * steps + col) : (slope * steps + PlayerColumn);
+                    }
+
+                    if (roundf(slopeCol) == slopeCol)
+                    {
+                        int terrain = point_getVal(grid_get(playerGrid, r, (int)slopeCol));
+                        if (terrain == 0 || terrain == 2 || terrain == 3 || terrain == 4 || terrain == 5)
+                        {
+                            blocked = true;
+                            break;
+                        }
+                    }
+                    else
+                    {
+                        int lower = floor(slopeCol);
+                        int upper = ceil(slopeCol);
+
+                        int leftBlock = point_getVal(grid_get(playerGrid, r, lower));
+                        int rightBlock = point_getVal(grid_get(playerGrid, r, upper));
+
+                        if ((leftBlock == 0 || leftBlock == 2 || leftBlock == 3 || leftBlock == 4 || leftBlock == 5) &&
+                            (rightBlock == 0 || rightBlock == 2 || rightBlock == 3 || rightBlock == 4 || rightBlock == 5))
+                        {
+                            blocked = true;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if (!blocked)
+            {
+                point_setTrack(current, true);
+                if (goldHere > 0)
+                {
+                    current->visibleGold = false;
+                }
+                grid_insert(playerGrid, current, row, col);
+            }
+            else if (wasVisible && goldHere > 0)
+            {
+                current->visibleGold = true;
+                grid_insert(playerGrid, current, row, col);
+            }
+        }
+    }
+}
+
+/****************  delete_point ****************/
+/*Free point*/
+void point_delete(point_t *point)
+{
+    if (point != NULL)
+    {
+        free(point);
+    }
+}
+
+/****************  delete_grid ****************/
+/*Free the grid*/
+void delete_grid(grid_t *grid)
+{
+    for (int i = 0; i < grid->numRows; i++)
+    {
+        for (int j = 0; j < grid_getNumCols; j++)
+        {
+            point_t *point = grid_get(grid, i, j);
+            point_delete(point);
+        }
+    }
+    free(grid);
+}
