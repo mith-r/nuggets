@@ -35,7 +35,7 @@
     if (fp == NULL) {
         fprintf(stderr, "Could not read file\n");
     }
-    grid_t* playerGrid = setMap(fp); //TO DO: CREATE FUNCTION
+    grid_t* playerGrid = initializeMap(fp);
     fclose(fp);
     
     //Inserting gold randomly into map
@@ -183,8 +183,8 @@
     fprintf(stdout, "Testing grid: \n");
     
     //Iterate over each point 
-    for (int i = 0; i <grid_getnumRows(playerGrid); i ++) {
-        for (int j = 0; j < grid_getnumCols; j ++) {
+    for (int i = 0; i <grid_getNumRows(playerGrid); i ++) {
+        for (int j = 0; j < grid_getNumCols(playerGrid); j ++) {
             // Print '@' at player's current position
             if (i == pRow && j == pCol) {
                 fprintf(stdout, "@");
@@ -193,15 +193,15 @@
 
             //Get point and check visibiliity
             point_t* gridPoint = grid_get(playerGrid, i, j);
-            if (point_getVisitility(gridPoint)) {
-                int gold = point_getGold(gridPoint); //Get num gold at point
+            if (point_getVisibility(gridPoint)) {
+                int gold = point_getNuggets(gridPoint); //Get num gold at point
 
                 //Depending on gold's visibliity print:
                 if (gold > 0) {
                     fprintf(stdout, "*"); // if visible and exists, print '*'
                 } 
                 else {
-                    fprintf(stdout, "%c", gridPoint->character); //Else print value
+                    fprintf(stdout, "%c", point_getChar(gridPoint)); //Else print value
                 }
             }
             else { //If point not visible print space
