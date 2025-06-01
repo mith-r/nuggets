@@ -32,9 +32,8 @@ static void serverComs(const char* serverHost, const char* serverPort);
 void messageServer(addr_t to, char* input);
 static bool handleInput(void* arg);
 static bool handleMessage(void* arg, const addr_t addr, const char* input);
-static void showDisplay(void);
 static void handleResize(int i);
-void checkTerminalSize(void);
+static void showDisplay(void);
 static void parseGold(const char* input);
 static void parseMap(const char* input);
 static void cleanGame(void);
@@ -44,8 +43,8 @@ static char playerChar = '\0';
 char* serverHost;
 char* serverPort;
 char* map;
-int rows = 0;
-int cols = 0;
+int nrows = 0;
+int ncols = 0;
 
 /************ gold tracking variables ************/
 int collected = 0;
@@ -92,7 +91,7 @@ static bool validateArgs(const int argc, const char* argv[]){
 }
 
 /************ setUpDisplay ************/
-static void setUpDisplay(int rows, int cols){
+static void setUpDisplay(int nrows, int ncols){
     initscr(); //initialize ncurses
     cbreak(); //diables line buffering
     noecho(); //don't echo typed characters on screen
@@ -200,9 +199,193 @@ static bool handleInput(void* arg){
 }
 
 /************ handleMessage ************/
-static bool handleMessage(void* arg, const addr_t addr, const char* input){
-    
+static bool handleMessage(void* arg, const addr_t address, const char* input){
+    if(input==NULL){
+        log_v("NULL input in handleMessage\n");
+        return true;
+    }
+    //handle "QUIT"
+    if(strncmp(input,"QUIT",strlen("QUIT")==0)){
+        exitGame(input);
+        return true;
+    }
+    //handle "OK"
+    if(strncmp(input,"OK", strlen("OK")==0)){
+        if(strlen(input)!=4){
+            log_v("Error: Incorrect OK message fomat in handleMessage\n");
+            return true;
+        }
+        playerChar = input[3]; //extract player character (4th)
+        return false;
+    }
+    //handle "GRID"
+    if(strncmp(input,"GRID", strlen("GRID")==0)){
+        parseMap(input); //set map rows and columns
+        setUpDisplay(nrows, ncols);
+        
+        int height;
+        int width;
+        getmaxyx(stdscr, height, width);
+        bool sizeCheck = true;
+
+        if(height<nrows || width<ncols){ //window to small
+            while(sizeCheck){
+                signal(SIGWINCH, handleResize);
+                getmaxyx(stdscr, height, width); //updated window
+                char character = getch(); //wait for input
+                if(character == "\n" && (height>nrows&&width>ncols)){ //if enter and big enough scren
+                    sizeCheck = false;
+                }
+            }
+        }
+
+        if(ncols==0){
+            log_v("Error: Invalid number of cols in handleMessage\n");
+        }
+        if(nrows==0){
+            log_v("Error: Invalid number of rows in handleMessage\n");
+        }
+
+        return false;
+    }
+    //handle "DISPLAY"
+    if(strncmp(input, "DISPLAY", strlen("DISPLAY")==0)){
+        strcpy(map, input + strlen("DISPLAY "));
+        showDisplay();
+        return false;
+    }
+    //handle "GOLD"
+    if(strncmp(input, "GOLD", strlen("GOLD")==0)){
+        parseGold(input);
+        return false;
+    }
+    //handle "ERROR"
+    if(strncmp(input, "ERROR", strlen("ERROR")==0)){
+        if (strlen(input) <= strlen("ERROR")){
+            log_v("ERROR: Empty or malformed ERROR message.\n");
+            return false;  
+        }
+        const char* errorText = input + strlen("ERROR");
+        strcpy(addedMessage, errorText);
+
+        addExtra = true;     
+        showGold = false; 
+
+    }
+
+    //if message matches none of message types above
+    log_v("Error: Invalid message to client\n"); 
+    return true;
+}
+
+/***************** resize *****************/
+static void handleResize(int k){
+    endwin();
+    initscr();
+    clear();
+    noecho();
+    cbreak();
+
+    const char* resizeMsg1 = "Please expand the size of your window";
+    const char* resizeMsg2 = "Press the 'return' key when ready";
+
+    mvprintw(0, 0, "%s", resizeMsg1);  // print first line
+    mvprintw(1, 0, "%s", resizeMsg2);  // print second line
+
+    refresh();
 }
 
 
+/************ showDisplay ************/
+static void showDisplay(void){
+    clear();
+    mvprintw(0, 0, "%s", displayMessage);
+    int wordlen = strlen(displayMessage);
+
+    if (addExtra) {
+        mvprintw(0, wordlen, "%s", addedMessage);
+        wordlen += strlen(addedMessage); // update total length on the line
+    }
+
+    while (wordlen < ncols) {
+        mvaddch(0, wordlen, ' ');  // place a space at position (0, len)
+        wordlen++;
+    }
+
+    mvprintw(1, 0, "%s", map);
+
+    if(!isSpectator){
+        int found = 0;
+        for (int row = 0; row <= nrows; row++) {
+            for (int col = 0; col <= ncols; col++) {
+                char ch = mvinch(row, col); // read the character at (row, col)
+                if (ch == '@') {
+                    move(row, col); // move cursor to player's position
+                    found = 1;
+                    break; // exit inner loop
+                }
+            }
+            if (found) {
+                break; // exit outer loop
+            }
+        }    
+    } else{
+        move(0,0);
+    }
+    refresh();
+}
+
+/************ parseGold ************/
+static void parseGold(const char* input){
+
+}
+
+/************ parseMap ************/
+static void parseMap(const char* input){
+
+}
+
+/************ cleanGame ************/
+static void cleanGame(void){
+    if (!isSpectator) {
+        if (playerName != NULL) {
+            free(playerName);
+            playerName = NULL;
+        }
+        if (addedMessage != NULL) {
+            free(addedMessage);
+            addedMessage = NULL;
+        }
+  }
+
+  if (map != NULL) {
+    free(map);
+    map = NULL;
+  }
+
+  if (displayMessage != NULL) {
+    free(displayMessage);
+    displayMessage = NULL;
+  }
+
+  if (playMessage != NULL) {
+    free(playMessage);
+    playMessage = NULL;
+  }
+
+  if (serverHost != NULL) {
+    free(serverHost);
+    serverHost = NULL;
+  }
+
+  if (serverPort != NULL) {
+    free(serverPort);
+    serverPort = NULL;
+  }
+
+  if (address != NULL) {
+    free(address);
+    address = NULL;
+  }
+}
 
