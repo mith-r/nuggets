@@ -1,6 +1,7 @@
 # CS50 Nuggets
 ## Implementation Spec
 ### Team 16 TBMGO shark
+### Team 16 TBMGO shark
 
 According to the [Requirements Spec](REQUIREMENTS.md), the Nuggets game requires two standalone programs: a client and a server.
 Our design also includes x, y, z modules.
