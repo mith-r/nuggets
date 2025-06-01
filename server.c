@@ -23,12 +23,12 @@ int validateSeed(char* seed);
 player_t* player_new(char* username, game_t* game, addr_t playerAddress);
 void assignGoldToPlayer(player_t* player, game_t* game);
 bool assignRandomSpot(player_t* player, game_t* game);
-player_t* findPlayerByAddress(game_t* game, addr_t* addr);
+player_t* findPlayerByAddress(game_t* game, addr_t addr);
 player_t* findPlayerByLetter(game_t* game, char playerLetter);
 static char pointValToChar(int pointVal)
-char* displayGame(game_t* game, addr_t* fromClient);
+char* displayGame(game_t* game, addr_t fromClient);
 
-
+static void game_spectate(game_t* game, addr_t clientAddress);
 static void game_end(game_t* game);
 
 static void player_delete(player_t* player, game_t* game);
@@ -542,7 +542,7 @@ bool assignRandomSpot(player_t* player, game_t* game) {
 
 
 //finds player by address
-player_t* findPlayerByAddress(game_t* game, addr_t* addr) {
+player_t* findPlayerByAddress(game_t* game, addr_t addr) {
     
   //null checks
   if (game == NULL || addr == NULL) {
@@ -585,7 +585,7 @@ player_t* findPlayerByLetter(game_t* game, char playerLetter) {
 
 
 //display the game for client (local view for player, full view for spectator)
-char* displayGame(game_t* game, addr_t* fromClient) {
+char* displayGame(game_t* game, addr_t fromClient) {
 
   grid_t* localGrid = NULL;
   grid_t* fullGrid = game->fullMap;
@@ -909,6 +909,78 @@ static void moveByKey(char key, int* dx, int* dy, bool* keepMoving) {
 
 
 
+/*
+ * Allows client to spectate the game
+ */
+static void game_spectate(game_t* game, addr_t clientAddress) {
+
+  //NULL checks
+  if (game == NULL || clientAddress == NULL) {
+    log_e("ERROR: game or clientAddress passed into game_spectate is NULL");
+    return;
+  }
+
+  //currentSpectator of the game if there is one
+  addr_t currentSpectator = game->spectator;
+
+  //check if there are any current spectators
+
+  //if incoming spectator address is different from current one
+  if (!message_eqAddr(currentSpectator, clientAddress)) {
+
+    //if there is a current spectator, notify them and kick (false means there is a current spectator)
+    if (!message_eqAddr(currentSpectator, message_noAddr)) {
+      message_send(currentSpectator, "QUIT A new spectator has replaced you");
+    }
+
+    game->spectator = clientAddress; //assign new spectator as client
+  }
+
+  //if there are no current spectators the client becomes the new spectator
+  else if (message_eqAddr(currentSpectator, message_noAddr())) {
+    game->spectator = clientAddress;
+  }
+
+  //send the game messages to the spectator
+
+  // Sending the GOLD message
+  int goldLeft = game->goldRemaining;
+  char gold_message = calloc(1, sizeof(char)*16);
+
+  //check if memory was correctly allocated
+  if (gold_message == NULL) {
+    log_e("ERROR: memory could not be allocated for gold_message in game_spectate");
+  }
+
+  snprintf(gold_message, sizeof(goldMessage), "GOLD 0 0 %d", goldLeft);
+  message_send(clientAddress, goldMessage);
+
+
+  // Sending the GRID message
+  int numRows = grid_getNumRows(game->fullMap);
+  int numCols = grid_getNumCols(game->fullMap);
+  char* grid_message = calloc(1, sizeof(char)*14);
+  //check if memory was correctly allocated
+  if (grid_message == NULL) {
+    log_e("ERROR: memory could not be allocated for grid_message in game_spectate");
+  }
+
+  //concatenate numRows and numCols to grid_message
+  snprintf(grid_message, sizeof(grid_message), "GRID %d %d", numRows, numCols);
+
+
+  //Sending DISPLAY message
+  char* display_message = displayGame(game, clientAddress);
+  message_send(clientAddress, display_message);
+
+  
+  //freeing memory
+  free(gold_message);
+  free(grid_message);
+  free(display_message);
+}
+
+
 
 /*
  * Ends the game and shows a summary of results
@@ -923,7 +995,7 @@ static void game_end(game_t* game) {
 
   //table summary of game results
   size_t* summary_size = 1000;
-  char* game_summary = calloc(summary_size, sizeof(char));
+  char* game_summary = calloc(1, summary_size*sizeof(char));
   
   //check if memory was allocated
   if (game_summary == NULL) {
@@ -970,8 +1042,6 @@ static void game_end(game_t* game) {
   log_v("Freeing memory for game summary in game_end");
   free(game_summary);
 }
-
-
 
 
 
