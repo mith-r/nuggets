@@ -8,7 +8,6 @@
 #include <ctype.h>
 #include <string.h>
 #include <unistd.h>
-
 #include "log.h"
 #include "message.h"
 
@@ -19,7 +18,8 @@
 //function prototypes
 game_t* game_new(char* mapFile);
 void game_start(game_t* game);
-void parseArgs(const int argc, const char* argv[], char** mapFile, char** seed)
+void parseArgs(const int argc, char* argv[], char** mapFile, char** seed);
+int validateSeed(char* seed);
 player_t* player_new(char* username, game_t* game, addr_t playerAddress);
 void assignGoldToPlayer(player_t* player, game_t* game);
 bool assignRandomSpot(player_t* player, game_t* game);
@@ -29,20 +29,25 @@ static char pointValToChar(int pointVal)
 char* displayGame(game_t* game, addr_t* fromClient);
 
 
+static void player_delete(player_t* player, game_t* game);
+static void game_delete(game_t* game);
+
+
+
 //global constants
-MaxNameLength = 50;   // max number of chars in playerName
-MaxPlayers = 26;      // maximum number of players
-GoldTotal = 250;      // amount of gold in the game
-GoldMinNumPiles = 10; // minimum number of gold piles
-GoldMaxNumPiles = 30; // maximum number of gold piles
+const int MaxNameLength = 50;   // max number of chars in playerName
+int MaxPlayers = 26;      // maximum number of players
+int GoldTotal = 250;      // amount of gold in the game
+int GoldMinNumPiles = 10; // minimum number of gold piles
+int GoldMaxNumPiles = 30; // maximum number of gold piles
 
 
 /*
  * game struct
  */
 typedef struct game {
-  player_t** player_array;  //array of all active players
-  grid_t* fullMap;     //game map displayed for everyone
+  player_t** player_array;  //array holding all active players
+  grid_t* fullMap;    //full grid displayed for all players
   addr_t spectator;     //address of the spectator
   char letter;          //letter of player (A-Z)
   const char* mapFile;
@@ -85,7 +90,7 @@ typedef struct point{
 typdef struct grid {
   int numRows;
   int numCols;
-  point_t** grid[500][500];
+  point_t** grid[250][250];  //size of grid
 } grid_t;
 
 
@@ -94,95 +99,96 @@ typdef struct grid {
  */
 int main (int argc, char* argv[]) {
   char* mapFile;
-  char* seed;
+  char* seed = NULL;
 
   log_init(stderr);  //initialize the log
 
   parseArgs(argc, argv, &mapFile, &seed);
  
   //initialize game
-  game_t* game = game_new(mapFile);
+  // game_t* game = game_new(mapFile);
   log_v("Initializing game");
 
   //if game failed to be created, terminate
-  if (game == NULL) {
-    log_v("Game failed to initialize");
-    log_done();
-  }
+  // if (game == NULL) {
+  //   log_v("Game failed to initialize");
+  //   log_done();
+  // }
 
   log_v("Game has been initialized");
-  game_start(game);
+  // game_start(game);
 
 
   //cleaning up
-  log_v("Freeing memory");
+  log_v("Freeing memory in main");
   free(mapFile);
-  if (seed != NULL) {
-    free(seed);
-  }
-
+  free(seed);
+ 
   log_done();
   return 0;
 }
 
 
 //validates arguments
-void parseArgs(const int argc, const char* argv[], char** mapFile, char** seed) {
+void parseArgs(const int argc, char* argv[], char** mapFile, char** seed) {
 
     //usage: ./server map.txt [seed]
 
     //if too few arguments
     if (argc < 2) {
-        flog_v(stderr, "Too few arguments provided");
+        flog_v(stderr, "ERROR: too few arguments provided");
         exit(1);
     }
 
     //if to many arguments
     if (argc > 3) {
-        flog_v(stderr, "Too many arguments provided");
+        flog_v(stderr, "ERROR: too many arguments provided");
         exit(2);
     }
 
     //if no mapFile provided
     if (argv[1] == NULL) {
-        flogv(stderr, "mapFile was not provided");
+        flog_v(stderr, "ERROR: mapFile was not provided");
         exit(3);
     }
 
+    //derefencing mapFile
+    *mapFile = strdup(argv[1]);
+
     //checking if map can be opened/readable
-    FILE* fp = fopen(argv[1], "r"); 
+    FILE* fp = fopen(*mapFile, "r"); 
     if (fp == NULL) {
-        flog_v(stderr, "map could not be opened");
+        flog_v(stderr, "ERROR: mapFile could not be opened");
         log_done();
         exit(4);
     }
 
-     fclose(mapFile);
+    fclose(fp);  //close file
+
     //if optional seed is given
     if (argv[2] != NULL) {
       log_s("Seed inputted: %s", argv[2]);
       *seed = strdup(argv[2]);
       
-      unsigned int verifiedSeed = validateSeed(seed);
-      log_d("Seed verified as: %d", seed);
+      int verifiedSeed = validateSeed(*seed);
+      log_d("Seed verified as: %d", verifiedSeed);
 
       //if seed is invalid
       if (verifiedSeed == -1) {
-        logs_("Seed is invalid: %d", verifiedSeed);
+        log_d("Seed is invalid: %d", verifiedSeed);
         log_done();
         exit(5);
       }
 
       //pass verified seed into srand()
       srand(verifiedSeed);
-      log_v("executed srand()");
-      free(seed);
+      log_v("Called srand()");
     }
 
     //else no optional seed was provided, so provide a random one
     else {
-      log_v("reached getpid()");
       srand(getpid());
+      log_v("Called getpid()");
     }
 }
 
@@ -209,7 +215,7 @@ int validateSeed(char* seed) {
   log_d("Seed validated as: %d", verifiedSeed);
 
   //check if seed is a positive integer
-  if (verified seed > 0) {
+  if (verifiedSeed > 0) {
     return verifiedSeed;
   }
 
@@ -259,14 +265,6 @@ game_t* game_new(char* mapFile) {
   //create total gold for all players
   return game;
 }
-
-
-
-
-
-
-
-
 
 
 
@@ -656,7 +654,6 @@ char* displayGame(game_t* game, addr_t* fromClient) {
           else {
             symbol = pointValToChar(point_getVal(localPoint));
           }
-
         }
       
         //if client is standing at that point
@@ -692,7 +689,6 @@ char* displayGame(game_t* game, addr_t* fromClient) {
         mapSymbol = pLetter;
       }
     }
-
 
       //concatenate symbol to the display/output string
       strncat(display, &mapSymbol, 1);
@@ -907,4 +903,57 @@ static void moveByKey(char key, int* dx, int* dy, bool* keepMoving) {
       flog_v("Invalid input received.\n");
       return;
   }
+}
+
+
+
+/*
+ * Deletes a player inside the game given a valid pointer to a player and game 
+ */
+static void player_delete(player_t* player, game_t* game) {
+  //NULL checks
+  if (player == NULL || game == NULL) {
+    return;
+  }
+
+  //Remove player from game's player_array
+  for (int i = 0; i<game->totalPlayers; i++) {
+
+    //if the player_array exists and player[i]'s letter matches player Letter
+    if(game->player_array[i] != NULL && game->player_array[i]->playerLetter == player->letter) {
+      game->player_array[i] = NULL;  //set pointer to NULL
+      break;
+    }
+  }
+
+  //free memory
+  delete_grid(player->grid);
+  free(player->name);
+  free(player);
+}
+
+
+
+/*
+ * deletes the game struct
+ */
+static void game_delete(game_t* game) {
+
+  //NULL check
+  if (game == NULL) {
+    return;
+  }
+
+  //loop through player_array and call player_delete on each player
+  for (int i = 0; i<MaxPlayers; i++) {
+    //safety cehck for if player_array exists
+    if(game->player_array[i] != NULL) {
+      player_delete(game->player_array[i], game);
+    }
+  }
+
+  //freeing memory
+  delete_grid(game->fullMap);
+  free(game->player_array);
+  free(game);
 }
