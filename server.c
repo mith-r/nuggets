@@ -7,6 +7,11 @@
 #include <stdbool.h>
 #include <ctype.h>
 #include <string.h>
+#include <unistd.h>
+
+#include "log.h"
+#include "message.h"
+
 #include "client.h"
 #include "grid.h"
 
@@ -14,7 +19,7 @@
 //function prototypes
 game_t* game_new(char* mapFile);
 void game_start(game_t* game);
-void parseArgs(const int argc, const char* argv[], int* seed);
+void parseArgs(const int argc, const char* argv[], char** mapFile, char** seed)
 player_t* player_new(char* username, game_t* game, addr_t playerAddress);
 void assignGoldToPlayer(player_t* player, game_t* game);
 bool assignRandomSpot(player_t* player, game_t* game);
@@ -62,7 +67,9 @@ typedef struct player {
   addr_t port;   //port player is connected to
 }
 
-
+/*
+ * Point struct
+ */
 typedef struct point{
     char value;
     char id;
@@ -72,12 +79,155 @@ typedef struct point{
     bool visibleGold;
 } point_t;
 
-
+/*
+ * Grid struct
+ */
 typdef struct grid {
   int numRows;
   int numCols;
   point_t** grid[500][500];
 } grid_t;
+
+
+/*
+ * main
+ */
+int main (int argc, char* argv[]) {
+  char* mapFile;
+  char* seed;
+
+  log_init(stderr);  //initialize the log
+
+  parseArgs(argc, argv, &mapFile, &seed);
+ 
+  //initialize game
+  game_t* game = game_new(mapFile);
+  log_v("Initializing game");
+
+  //if game failed to be created, terminate
+  if (game == NULL) {
+    log_v("Game failed to initialize");
+    log_done();
+  }
+
+  log_v("Game has been initialized");
+  game_start(game);
+
+
+  //cleaning up
+  log_v("Freeing memory");
+  free(mapFile);
+  if (seed != NULL) {
+    free(seed);
+  }
+
+  log_done();
+  return 0;
+}
+
+
+//validates arguments
+void parseArgs(const int argc, const char* argv[], char** mapFile, char** seed) {
+
+    //usage: ./server map.txt [seed]
+
+    //if too few arguments
+    if (argc < 2) {
+        flog_v(stderr, "Too few arguments provided");
+        exit(1);
+    }
+
+    //if to many arguments
+    if (argc > 3) {
+        flog_v(stderr, "Too many arguments provided");
+        exit(2);
+    }
+
+    //if no mapFile provided
+    if (argv[1] == NULL) {
+        flogv(stderr, "mapFile was not provided");
+        exit(3);
+    }
+
+    //checking if map can be opened/readable
+    FILE* fp = fopen(argv[1], "r"); 
+    if (fp == NULL) {
+        flog_v(stderr, "map could not be opened");
+        log_done();
+        exit(4);
+    }
+
+     fclose(mapFile);
+    //if optional seed is given
+    if (argv[2] != NULL) {
+      log_s("Seed inputted: %s", argv[2]);
+      *seed = strdup(argv[2]);
+      
+      unsigned int verifiedSeed = validateSeed(seed);
+      log_d("Seed verified as: %d", seed);
+
+      //if seed is invalid
+      if (verifiedSeed == -1) {
+        logs_("Seed is invalid: %d", verifiedSeed);
+        log_done();
+        exit(5);
+      }
+
+      //pass verified seed into srand()
+      srand(verifiedSeed);
+      log_v("executed srand()");
+      free(seed);
+    }
+
+    //else no optional seed was provided, so provide a random one
+    else {
+      log_v("reached getpid()");
+      srand(getpid());
+    }
+}
+
+  
+
+    //if no optional seed is given, provide one
+    if (argv[1] == NULL) {
+        srand(getpid(seed));
+    }
+
+
+    return;
+}
+
+
+/*
+ * validates the provided seed
+ */
+int validateSeed(char* seed) {
+
+  int seedLength = strlen(seed);
+  
+  //loop through characters in seed
+  for (int i = 0; i<seedLength; i++) {
+
+    //if character is not a digit, it is an invalid seed
+    if (isdigit(seed[i]) == 0) {
+      flog_v(stderr, "Invalid seed given");
+      exit(1);
+    }
+  }
+
+  //convert string seed to int
+  int verifiedSeed = atoi(seed);
+  log_d("Seed validated as: %d", verifiedSeed);
+
+  //check if seed is a positive integer
+  if (verified seed > 0) {
+    return verifiedSeed;
+  }
+
+  return -1; //error
+}
+
+
 
 
 
@@ -122,6 +272,17 @@ game_t* game_new(char* mapFile) {
 }
 
 
+
+
+
+
+
+
+
+
+
+
+
 //starts the game and listens for incoming messages
 void game_start(game_t* game) {
 
@@ -133,7 +294,6 @@ void game_start(game_t* game) {
     exit(1);
   }
 
-  
   flog_v("Server port: %d", port);
   bool isReceiving = message_loop(game, 0, NULL, NULL, handle_message);
   
@@ -270,52 +430,6 @@ bool processMessage(void* arg, addr_t fromClient, const char* message) {
 
 }
     }
-}
-
-
-//validates arguments
-void parseArgs(const int argc, const char* argv[], int* seed) {
-    int* seed = 0;  
-
-    //if wrong number of arguments
-    if (argc !=3) {
-        flog_v(stderr, "Too many arguments provided");
-        exit(1);
-    }
-
-    //if no mapFile provided
-    if (argv[1] == NULL) {
-        flogv(stderr, "map file invalid");
-        exit(2);
-    }
-
-    //if optional seed is given
-    if (argv[2] != NULL) {
-        int length = strlen(argv[2]);
-        //verify it is a valid seed (all integers)
-        for (int i = 0 ; i<) {
-            if (!isdigit(argv[2][i])) {
-                flov_v(stderr, "Invalid seed given");
-                exit(3);
-            }
-        }
-        seed = atoi(argv[2]);  //converts string seed to int seed
-        seed = srand(seed);
-    }
-
-    //if no optional seed is given, provide one
-    if (argv[1] == NULL) {
-        srand(getpid(seed));
-    }
-
-    //checking if map could be opened/readable
-    FILE* fp = fopen(argv[1], "r"); 
-
-    if (fp == NULL) {
-        flog_v(stderr, "map could not be opened");
-        exit(1);
-    }
-    return;
 }
 
 
