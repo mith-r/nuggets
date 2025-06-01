@@ -8,50 +8,26 @@
 #include <ctype.h>
 #include <string.h>
 #include <unistd.h>
+#include <time.h>
+
 #include "log.h"
 #include "message.h"
-
-
-#include "client.h"
 #include "grid.h"
 
 
-//function prototypes
-game_t* game_new(char* mapFile);
-bool game_start(game_t* game);
-void parseArgs(const int argc, char* argv[], char** mapFile, char** seed);
-int validateSeed(char* seed);
-player_t* player_new(char* username, game_t* game, addr_t playerAddress);
-void assignGoldToPlayer(player_t* player, game_t* game);
-bool assignRandomSpot(player_t* player, game_t* game);
-player_t* findPlayerByAddress(game_t* game, addr_t addr);
-player_t* findPlayerByLetter(game_t* game, char playerLetter);
-static char pointValToChar(int pointVal)
-char* displayGame(game_t* game, addr_t fromClient);
-
-
-static void sendGridMessage(game_t* game, addr_t to);
-static void sendGoldMessage(int goldCollected, int purse, int goldRemaining, addr_t to);
-static void sendDisplayMessage(game_t* game, addr_t to);
-
-
-
-
-
-static void game_spectate(game_t* game, addr_t clientAddress);
-static void game_end(game_t* game);
-
-static void player_delete(player_t* player, game_t* game);
-static void game_delete(game_t* game);
-
-
-
-//global constants
-const int MaxNameLength = 50;   // max number of chars in playerName
-int MaxPlayers = 26;      // maximum number of players
-int GoldTotal = 250;      // amount of gold in the game
-int GoldMinNumPiles = 10; // minimum number of gold piles
-int GoldMaxNumPiles = 30; // maximum number of gold piles
+/*
+ * player struct
+ */
+typedef struct player {
+  char* username;
+  char letter;
+  grid_t* grid;
+  int x;   //x coord of player in map
+  int y;   //y coord of player in map
+  int justCollected;   //how much gold player just collected
+  int purse;           //amount of gold held by that player
+  addr_t port;   //port player is connected to
+} player_t;
 
 
 /*
@@ -70,19 +46,6 @@ typedef struct game {
 } game_t;
 
 
-/*
- * player struct
- */
-typedef struct player {
-  char* username;
-  char letter;
-  grid_t* grid;
-  int x;   //x coord of player in map
-  int y;   //y coord of player in map
-  int justCollected;   //how much gold player just collected
-  int purse;           //amount of gold held by that player
-  addr_t port;   //port player is connected to
-}
 
 /*
  * Point struct
@@ -99,11 +62,49 @@ typedef struct point{
 /*
  * Grid struct
  */
-typdef struct grid {
+typedef struct grid{
   int numRows;
   int numCols;
   point_t** grid[250][250];  //size of grid
 } grid_t;
+
+
+
+//function prototypes
+game_t* game_new(char* mapFile);
+bool game_start(game_t* game);
+void parseArgs(const int argc, char* argv[], char** mapFile, char** seed);
+int validateSeed(char* seed);
+player_t* player_new(char* username, game_t* game, addr_t playerAddress);
+void assignGoldToPlayer(player_t* player, game_t* game);
+bool assignRandomSpot(player_t* player, game_t* game);
+player_t* findPlayerByAddress(game_t* game, addr_t addr);
+player_t* findPlayerByLetter(game_t* game, char playerLetter);
+static char pointValToChar(int pointVal);
+char* displayGame(game_t* game, addr_t fromClient);
+
+
+static void sendGridMessage(game_t* game, addr_t to);
+static void sendGoldMessage(int goldCollected, int purse, int goldRemaining, addr_t to);
+static void sendDisplayMessage(game_t* game, addr_t to);
+
+
+static void game_spectate(game_t* game, addr_t clientAddress);
+static void game_end(game_t* game);
+
+
+static void player_delete(player_t* player, game_t* game);
+static void game_delete(game_t* game);
+
+
+
+//global constants
+const int MaxNameLength = 50;   // max number of chars in playerName
+int MaxPlayers = 26;      // maximum number of players
+int GoldTotal = 250;      // amount of gold in the game
+int GoldMinNumPiles = 10; // minimum number of gold piles
+int GoldMaxNumPiles = 30; // maximum number of gold piles
+
 
 
 /*
@@ -118,17 +119,17 @@ int main (int argc, char* argv[]) {
   parseArgs(argc, argv, &mapFile, &seed);
  
   //initialize game
-  // game_t* game = game_new(mapFile);
+  game_t* game = game_new(mapFile);
   log_v("Initializing game");
 
   //if game failed to be created, terminate
-  // if (game == NULL) {
-  //   log_v("Game failed to initialize");
-  //   log_done();
-  // }
+  if (game == NULL) {
+    log_v("Game failed to initialize");
+    log_done();
+  }
 
   log_v("Game has been initialized");
-  // game_start(game);
+  game_start(game);
 
 
   //cleaning up
@@ -643,7 +644,7 @@ char* displayGame(game_t* game, addr_t fromClient) {
   strcpy(display, "DISPLAY\n");
 
   //loop through map and form the game display/screen
-  for(int i = 0; i<numRows; i+) {
+  for(int i = 0; i<numRows; i++) {
     for (int j = 0; j<numCols; j++) {
       
       point_t* globalPoint = grid_get(fullGrid, i, j);
@@ -856,7 +857,7 @@ static void processKeystroke(game_t* game, player_t* player, char* keyMessage) {
   int* dy = 0;
 
   //if uppercase key pressed, we want to keep moving until we can't
-  bool keepMoving = false;
+  bool keepMoving* = false;
 
   char keystroke = keyMessage[0];
   flog_v("Processing player input...\n");
@@ -898,28 +899,31 @@ static void processKeystroke(game_t* game, player_t* player, char* keyMessage) {
  * Process UPPERCASE keys (move continuously until can't on map)
  */
 static void moveByKey(char key, int* dx, int* dy, bool* keepMoving) {
-  
+  *dx = 0;
+  *dy = 0;
+  **keepMoving = false;
+
   switch (key) {
     //lower case keystrokes
-    case 'h': dx = -1; dy = 0; return;  //move left, if possible
-    case 'l': dx = 1; dy = 0;  return;  // move right, if possible
-    case 'j': dx = 0; dy = -1;  return;  //move down, if possible
-    case 'k': dx = 0; dy=1;   return;  //move up, if possible
-    case 'y': dx = -1; dy= -1;  return;  //move diagonally up and left, if possible
-    case 'u': dx = 1; dy = 1;  return;  //move diagonally up and right, if possible
-    case 'b': dx = -1; dy = -1;  return;   //move diagonally down and left, if possible
-    case 'n': dx = 1; dy = -1;  return;   //move diagonally down and right, if possible
+    case 'h': *dx = -1; *dy = 0; return;  //move left, if possible
+    case 'l': *dx = 1; *dy = 0;  return;  // move right, if possible
+    case 'j': *dx = 0; *dy = -1;  return;  //move down, if possible
+    case 'k': *dx = 0; *dy=1;   return;  //move up, if possible
+    case 'y': *dx = -1; *dy= -1;  return;  //move diagonally up and left, if possible
+    case 'u': *dx = 1; *dy = 1;  return;  //move diagonally up and right, if possible
+    case 'b': *dx = -1; *dy = -1;  return;   //move diagonally down and left, if possible
+    case 'n': *dx = 1; *dy = -1;  return;   //move diagonally down and right, if possible
 
 
     //upper case keystrokes
-    case 'H': dx = -1; dy = 0; keepMoving = true; return;  //move left, if possible
-    case 'L': dx = 1; dy = 0;  keepMoving = true; return;  // move right, if possible
-    case 'J': dx = 0; dy = -1;  keepMoving = true; return;  //move down, if possible
-    case 'K': dx = 0; dy=1;   keepMoving = true; return;  //move up, if possible
-    case 'Y': dx = -1; dy= -1; keepMoving = true; return;  //move diagonally up and left, if possible
-    case 'U': dx = 1; dy = 1;  keepMoving = true; return;  //move diagonally up and right, if possible
-    case 'B': dx = -1; dy = -1;  keepMoving = true; return;   //move diagonally down and left, if possible
-    case 'N': dx = 1; dy = -1;  keepMoving = true; return;   //move diagonally down and right, if possible
+    case 'H': *dx = -1; *dy = 0; *keepMoving = true; return;  //move left, if possible
+    case 'L': *dx = 1; *dy = 0;  keepMoving = true; return;  // move right, if possible
+    case 'J': *dx = 0; *dy = -1;  *keepMoving = true; return;  //move down, if possible
+    case 'K': *dx = 0; *dy=1;   *keepMoving = true; return;  //move up, if possible
+    case 'Y': *dx = -1; *dy= -1; *keepMoving = true; return;  //move diagonally up and left, if possible
+    case 'U': *dx = 1; *dy = 1;  *keepMoving = true; return;  //move diagonally up and right, if possible
+    case 'B': *dx = -1; *dy = -1;  *keepMoving = true; return;   //move diagonally down and left, if possible
+    case 'N': *dx = 1; **dy = -1;  *keepMoving = true; return;   //move diagonally down and right, if possible
 
     //if invalid key
     default:
@@ -1046,7 +1050,7 @@ static void game_end(game_t* game) {
   }
 
   //send the game summary to each player
-  for (int i = 0; i<game->totalPlayers, i++) {
+  for (int i = 0; i<game->totalPlayers; i++) {
     player_t* player = game->player_array[i];
 
     //check if player exists and their address exist
