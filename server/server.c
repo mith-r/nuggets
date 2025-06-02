@@ -47,18 +47,6 @@ typedef struct game {
 
 
 /*
- * Point struct
- */
-typedef struct point{
-    char value;
-    char id;
-    int goldCount;
-    int val;
-    bool isVisible;
-    bool visibleGold;
-} point_t;
-
-/*
  * Grid struct
  */
 typedef struct grid{
@@ -74,18 +62,21 @@ game_t* game_new(char* mapFile);
 bool game_start(game_t* game);
 void parseArgs(const int argc, char* argv[], char** mapFile, char** seed);
 int validateSeed(char* seed);
-player_t* player_new(char* username, game_t* game, addr_t playerAddress);
+player_t* playerNew(const char* username, game_t* game, addr_t playerAddress);
 void assignGoldToPlayer(player_t* player, game_t* game);
-bool assignRandomSpot(player_t* player, game_t* game);
+bool assignRandomSpot(player_t* playeclearr, game_t* game);
 player_t* findPlayerByAddress(game_t* game, addr_t addr);
 player_t* findPlayerByLetter(game_t* game, char playerLetter);
 static char pointValToChar(int pointVal);
 char* displayGame(game_t* game, addr_t fromClient);
+static void processKeystroke(game_t* game, player_t* player, const char* keyMessage);
+static void moveByKey(char key, int* dx, int* dy, bool* keepMoving);
 
 
 static void sendGridMessage(game_t* game, addr_t to);
 static void sendGoldMessage(int goldCollected, int purse, int goldRemaining, addr_t to);
 static void sendDisplayMessage(game_t* game, addr_t to);
+bool processMessage(void* arg, addr_t clientAddress, const char* message);
 
 
 static void game_spectate(game_t* game, addr_t clientAddress);
@@ -130,13 +121,18 @@ int main (int argc, char* argv[]) {
   log_v("Game has been initialized");
   game_start(game);
 
+  game_end(game);
+
 
   //cleaning up
   log_v("Freeing memory in main");
   free(mapFile);
   free(seed);
- 
+  
+
   log_done();
+
+  game_delete(game);
   return 0;
 }
 
@@ -266,13 +262,13 @@ game_t* game_new(char* mapFile) {
   
   //check if map could be opened
   FILE* fp = fopen(mapFile, "r");
-  if (fp = NULL) {
+  if (fp == NULL) {
     log_v("Game could not load map");
     exit(1);
   }
   
   log_v("Initializing mapFile");
-  game->mapFile = initializeMap(mapFile);
+  game->fullMap = initializeMap(fp);
 
   log_v("Randomizing number of piles");
   randomizeGold(game->fullMap, GoldMinNumPiles, GoldMaxNumPiles, GoldTotal);
@@ -316,7 +312,7 @@ bool processMessage(void* arg, addr_t clientAddress, const char* message) {
   //check if message received was "PLAY", create a new player
   if (strncmp(message, "PLAY ", strlen("PLAY ")) == 0) {
     const char* name = message + strlen("PLAY ");
-    player_t* player = player_new(name, game, clientAddress);
+    player_t* player = playerNew(name, game, clientAddress);
 
     //if player is NULL, we reached max players
     if (player == NULL) {
@@ -368,7 +364,7 @@ bool processMessage(void* arg, addr_t clientAddress, const char* message) {
 
         //update the display for current spectator if there is any
         if (!message_eqAddr(game->spectator, message_noAddr())) {
-          spectate(game, game->spectator);
+          game_spectate(game, game->spectator);
         }
       }
     }
@@ -396,25 +392,21 @@ bool processMessage(void* arg, addr_t clientAddress, const char* message) {
  * Helper function for processMessage that sends gridMessage
  */
 static void sendGridMessage(game_t* game, addr_t to) {
-
-  //getting numRows and numCols
   int numRows = grid_getNumRows(game->fullMap);
   int numCols = grid_getNumCols(game->fullMap);
 
-  //finding number of digits so we can dynamically allocate memory for GRID message
-  char* numRows; char* numCols;
-  int numRowDigits = snprintf(NULL, 0,"%d", numRows);
+  // How many digits each integer has:
+  int numRowDigits = snprintf(NULL, 0, "%d", numRows);
   int numColDigits = snprintf(NULL, 0, "%d", numCols);
 
-  int bufferSize = 5 + numRowDigits + 1 + numColDigits+ 1; // GRID + space + rows + cols + '\0'
+  // 5 for "GRID ", + numRowDigits, + 2 for ", ", + numColDigits, + 1 for '\0'
+  int bufferSize = 5 + numRowDigits + 2 + numColDigits + 1; 
   char *grid_message = malloc(bufferSize);
-
-  //check if memory was allocated
-  if (grid_message == NULL) {
-    log_v("Malloc failed for GRID message");
-    return;
+  if (!grid_message) {
+      log_v("Malloc failed for GRID message");
+      return;
   }
-  
+
   snprintf(grid_message, bufferSize, "GRID %d, %d", numRows, numCols);
   message_send(to, grid_message);
   free(grid_message);
@@ -445,7 +437,7 @@ static void sendDisplayMessage(game_t* game, addr_t to) {
 /*
  * Instantiates new player struct
  */
-player_t* player_new(char* username, game_t* game, addr_t playerAddress) {
+player_t* playerNew(const char* username, game_t* game, addr_t playerAddress) {
 
   //check if under max players (26)
   if (game->totalPlayers < MaxPlayers) {
@@ -532,7 +524,7 @@ void assignGoldToPlayer(player_t* player, game_t* game) {
   for (int i = 0; i< grid_getNumRows(game->fullMap); i++) {
     for (int j = 0; j<grid_getNumCols(game->fullMap); j++) {
         point_t* gridPoint = grid_get(game->fullMap, i, j);
-        int amountGold = point_getGold(gridPoint);
+        int amountGold = point_getNuggets(gridPoint);
 
         //if there was gold at that spot, give it to a player and remove it after collected
         if (amountGold > 0) {
@@ -554,7 +546,7 @@ bool assignRandomSpot(player_t* player, game_t* game) {
 
   bool assignedSpot = false;  //whether a player was assigned a random spot
   int numRows = grid_getNumRows(game->fullMap);
-  int numCols = grid_getNumCosl(game->fullMap);
+  int numCols = grid_getNumCols(game->fullMap);
 
   //if player hasn't been assigned a spot, give player random coordinates
   if (!assignedSpot) {
@@ -669,17 +661,17 @@ char* displayGame(game_t* game, addr_t fromClient) {
     for (int j = 0; j<numCols; j++) {
       
       point_t* globalPoint = grid_get(fullGrid, i, j);
-      char* playerLetter;
-      char* mapSymbol = ' ';
+      char mapSymbol = ' ';
 
       //if client is a player (not spectator) display local grid
       if (!isSpectator) {
         point_t* localPoint = grid_get(localGrid, i, j);
+        char playerLetter;
 
         //check if point is within player's field of vision
-        if (point_getVisability(localPoint)) {
+        if (point_getVisibility(localPoint)) {
           //get letter of any player standing at this point in the global grid
-          char playerLetter = point_getChar(globalPoint);
+          playerLetter = point_getChar(globalPoint);
         }
 
         //if no player is standing at that point
@@ -687,11 +679,11 @@ char* displayGame(game_t* game, addr_t fromClient) {
 
           //if gold is not visible to player
           if (!localPoint->visibleGold) {
-            mapSymbol = pointValToChar(localPoint);
+            mapSymbol = pointValToChar(localPoint->playerLetter);
           }
 
           //else if gold is visible to the player
-          else if (point_getGold(globalPoint)) {
+          else if (point_getNuggets(globalPoint)) {
             mapSymbol = '*';
           }
 
@@ -720,7 +712,7 @@ char* displayGame(game_t* game, addr_t fromClient) {
         //if no player is at that point
         if (pLetter == ' ') {
           //if there is gold, show it
-          if (point_getGold(globalPoint) > 0) {
+          if (point_getNuggets(globalPoint) > 0) {
             mapSymbol = '*';
           }
           //else display the terrain
@@ -792,7 +784,7 @@ static bool movePlayer(game_t* game, player_t* player, int currX, int currY, int
     point_setPlayer(newGlobalPoint, player->letter);
 
     //check for and collect gold
-    int numGold = point_getGold(newGlobalPoint);
+    int numGold = point_getNuggets(newGlobalPoint);
 
     //if there is gold at that point, player collects it
     if (numGold > 0) {
@@ -806,14 +798,14 @@ static bool movePlayer(game_t* game, player_t* player, int currX, int currY, int
       game->goldRemaining = GoldTotal - game->totalGoldCollected;
       
       game->totalGoldCollected += numGold;
-      point_setGold(newGlobalPoint, 0);
+      point_setNuggets(newGlobalPoint, 0);
     }
 
     //clear old positions that had gold
     point_setPlayer(oldLocalPoint, ' ');
-    point_setPLayer(oldGlobalPoint, ' ');
+    point_setPlayer(oldGlobalPoint, ' ');
 
-    updateMap(localGrid, newX, newY);
+    mapUpdate(localGrid, newX, newY);
     return true;
 
   }
@@ -841,14 +833,14 @@ static bool movePlayer(game_t* game, player_t* player, int currX, int currY, int
       point_setPlayer(newLocalPoint, player->letter);
       point_setPlayer(oldLocalPoint, ' ');
 
-      updateMap(localGrid, newX, newY);
+      mapUpdate(localGrid, newX, newY);
       return true;
     
     }
   }
 
   //case 3: invalid move
-  updateMap(localGrid, player->x, player->y);
+  mapUpdate(localGrid, player->x, player->y);
   return false;
 }
 
@@ -856,7 +848,7 @@ static bool movePlayer(game_t* game, player_t* player, int currX, int currY, int
 /*
  * Handles keystrokes client presses and updates the player's position on the map
  */
-static void processKeystroke(game_t* game, player_t* player, char* keyMessage) {
+static void processKeystroke(game_t* game, player_t* player, const char* keyMessage) {
 
   //null check
   if (player == NULL) {
@@ -878,7 +870,7 @@ static void processKeystroke(game_t* game, player_t* player, char* keyMessage) {
   int dy = 0;
 
   //if uppercase key pressed, we want to keep moving until we can't
-  bool keepMoving = false;
+  bool* keepMoving = false;
 
   char keystroke = keyMessage[0];
   log_v("Processing player input...\n");
@@ -892,7 +884,7 @@ static void processKeystroke(game_t* game, player_t* player, char* keyMessage) {
   }
 
   //handle keystrokes
-  moveByKey(keystroke, dx, dy, keepMoving);
+  moveByKey(keystroke, &dx, &dy, keepMoving);
   int newX = currX + dx;
   int newY = currY + dy;
 
@@ -938,7 +930,7 @@ static void moveByKey(char key, int* dx, int* dy, bool* keepMoving) {
 
     //upper case keystrokes
     case 'H': *dx = -1; *dy = 0; *keepMoving = true; return;  //move left, if possible
-    case 'L': *dx = 1; *dy = 0;  keepMoving = true; return;  // move right, if possible
+    case 'L': *dx = 1; *dy = 0;  *keepMoving = true; return;  // move right, if possible
     case 'J': *dx = 0; *dy = -1;  *keepMoving = true; return;  //move down, if possible
     case 'K': *dx = 0; *dy=1;   *keepMoving = true; return;  //move up, if possible
     case 'Y': *dx = -1; *dy= -1; *keepMoving = true; return;  //move diagonally up and left, if possible
@@ -985,28 +977,28 @@ static void game_spectate(game_t* game, addr_t clientAddress) {
 
   // Sending the GOLD message
   int goldLeft = game->goldRemaining;
-  char gold_message = calloc(1, sizeof(char)*16);
+  char* gold_message = calloc(1,16);
 
   //check if memory was correctly allocated
   if (gold_message == NULL) {
     log_e("ERROR: memory could not be allocated for gold_message in game_spectate");
   }
 
-  snprintf(gold_message, sizeof(gold_message), "GOLD 0 0 %d", goldLeft);
+  snprintf(gold_message, 16, "GOLD 0 0 %d", goldLeft);
   message_send(clientAddress, gold_message);
 
 
   // Sending the GRID message
   int numRows = grid_getNumRows(game->fullMap);
   int numCols = grid_getNumCols(game->fullMap);
-  char* grid_message = calloc(1, sizeof(char)*14);
+  char* grid_message = calloc(1, 14);
   //check if memory was correctly allocated
   if (grid_message == NULL) {
     log_e("ERROR: memory could not be allocated for grid_message in game_spectate");
   }
 
   //concatenate numRows and numCols to grid_message
-  snprintf(grid_message, sizeof(grid_message), "GRID %d %d", numRows, numCols);
+  snprintf(grid_message, 16, "GRID %d %d", numRows, numCols);
 
 
   //Sending DISPLAY message
@@ -1034,8 +1026,7 @@ static void game_end(game_t* game) {
   }
 
   //table summary of game results
-  size_t* summary_size = 1000;
-  char* game_summary = calloc(1, summary_size);
+  char* game_summary = calloc(1, 1000);
   
   //check if memory was allocated
   if (game_summary == NULL) {
@@ -1075,7 +1066,7 @@ static void game_end(game_t* game) {
   }
 
   //send message to spectator if there is one
-  if (message_isAdrr(game->spectator)) {
+  if (message_isAddr(game->spectator)) {
     message_send(game->spectator, game_summary);
   }
 
