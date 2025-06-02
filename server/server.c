@@ -148,19 +148,19 @@ void parseArgs(const int argc, char* argv[], char** mapFile, char** seed) {
 
     //if too few arguments
     if (argc < 2) {
-        flog_v(stderr, "ERROR: too few arguments provided");
+        log_v( "ERROR: too few arguments provided");
         exit(1);
     }
 
     //if to many arguments
     if (argc > 3) {
-        flog_v(stderr, "ERROR: too many arguments provided");
+        log_v("ERROR: too many arguments provided");
         exit(2);
     }
 
     //if no mapFile provided
     if (argv[1] == NULL) {
-        flog_v(stderr, "ERROR: mapFile was not provided");
+        log_v("ERROR: mapFile was not provided");
         exit(3);
     }
 
@@ -170,7 +170,7 @@ void parseArgs(const int argc, char* argv[], char** mapFile, char** seed) {
     //checking if map can be opened/readable
     FILE* fp = fopen(*mapFile, "r"); 
     if (fp == NULL) {
-        flog_v(stderr, "ERROR: mapFile could not be opened");
+        log_v("ERROR: mapFile could not be opened");
         log_done();
         exit(4);
     }
@@ -217,7 +217,7 @@ int validateSeed(char* seed) {
 
     //if character is not a digit, it is an invalid seed
     if (isdigit(seed[i]) == 0) {
-      flog_v(stderr, "Invalid seed given");
+      log_v("Invalid seed given");
       exit(1);
     }
   }
@@ -238,13 +238,13 @@ int validateSeed(char* seed) {
 
 //creates a new game struct
 game_t* game_new(char* mapFile) {
-  flog_v(mapFile, "Starting new game");
+  log_v("Starting new game");
 
   game_t* game = malloc(sizeof(game_t));
 
   //check for memory error
   if (game == NULL) {
-    flog_v(stderr, "Game could not be initialized");
+    log_v("Game could not be initialized");
     return NULL;
   }
 
@@ -267,7 +267,7 @@ game_t* game_new(char* mapFile) {
   //check if map could be opened
   FILE* fp = fopen(mapFile, "r");
   if (fp = NULL) {
-    flog_v(stderr, "Game could not load map");
+    log_v("Game could not load map");
     exit(1);
   }
   
@@ -291,19 +291,19 @@ bool game_start(game_t* game) {
 
   //if port wasn't initialized
   if(port == 0) {
-    flog_v(stderr, "could not initialize port");
+    log_v("could not initialize port");
     return false;
   }
 
-  flog_v(port, "Server port: %d");
+  log_v("Server port: %d");
   bool isReceiving = message_loop(game, 0, NULL, NULL, processMessage);
   
   if (!isReceiving) {
-    flog_v(port, "message_loop failed");
+    log_v("message_loop failed");
     return false;
   }
 
-  flog_v(port, "message loop successful");
+  log_v("message loop successful");
   return true;
 }
 
@@ -576,7 +576,7 @@ bool assignRandomSpot(player_t* player, game_t* game) {
       }
 
       else {
-        flog_v("Could not assign random spot for player");
+        log_v("Could not assign random spot for player");
       }
 
       //if spot wasn't assigned (x,y are still default 0,0)
@@ -591,11 +591,6 @@ bool assignRandomSpot(player_t* player, game_t* game) {
 
 //finds player by address
 player_t* findPlayerByAddress(game_t* game, addr_t addr) {
-    
-  //null checks
-  if (game == NULL || addr == NULL) {
-    flog_v(stderr, "game or address passed in was null");
-  }
 
   //loop through player array and find that player based on their address
   for (int i =0; i<game->totalPlayers; i++) {
@@ -615,7 +610,7 @@ player_t* findPlayerByLetter(game_t* game, char playerLetter) {
     
   //null check
   if (game == NULL) {
-    flog_v(stderr, "game is null");
+    log_v("game is null");
     return NULL;
   }
 
@@ -659,11 +654,11 @@ char* displayGame(game_t* game, addr_t fromClient) {
 
   
   //string display will represent/display the entire game at that current moment
-  char* display = malloc(sizeof(char)*(total+1));
+  char* display = malloc((totalSpaces+1));
 
   //check if memory was allocated
   if (display == NULL) {
-    flog_v("Could not malloc string display to display game info");
+    log_v("Could not malloc string display to display game info");
     return NULL;
   }
   
@@ -674,8 +669,8 @@ char* displayGame(game_t* game, addr_t fromClient) {
     for (int j = 0; j<numCols; j++) {
       
       point_t* globalPoint = grid_get(fullGrid, i, j);
-
-      char mapSymbol = ' ';
+      char* playerLetter;
+      char* mapSymbol = ' ';
 
       //if client is a player (not spectator) display local grid
       if (!isSpectator) {
@@ -697,12 +692,12 @@ char* displayGame(game_t* game, addr_t fromClient) {
 
           //else if gold is visible to the player
           else if (point_getGold(globalPoint)) {
-            symbol = '*';
+            mapSymbol = '*';
           }
 
           //otherwise show terrain of map based on point's local value
           else {
-            symbol = pointValToChar(point_getVal(localPoint));
+            mapSymbol = pointValToChar(point_getVal(localPoint));
           }
         }
       
@@ -745,7 +740,7 @@ char* displayGame(game_t* game, addr_t fromClient) {
       }
 
     //add new line to end of each row
-    strcat(output, "\n"); 
+    strcat(display, "\n"); 
   }
   return display;
 }
@@ -800,17 +795,17 @@ static bool movePlayer(game_t* game, player_t* player, int currX, int currY, int
     int numGold = point_getGold(newGlobalPoint);
 
     //if there is gold at that point, player collects it
-    if (gold > 0) {
+    if (numGold > 0) {
 
       //update player's purse and justCollected gold
-      player->purse += gold;
-      player->justCollected = gold;
+      player->purse += numGold;
+      player->justCollected = numGold;
 
       //update game's goldCollected and goldRemaining variables
-      game->goldCollected += gold;
-      game->goldRemaining = GoldTotal - game->goldCollected;
+      game->totalGoldCollected += numGold;
+      game->goldRemaining = GoldTotal - game->totalGoldCollected;
       
-      goldCollected += gold;
+      game->totalGoldCollected += numGold;
       point_setGold(newGlobalPoint, 0);
     }
 
@@ -865,12 +860,12 @@ static void processKeystroke(game_t* game, player_t* player, char* keyMessage) {
 
   //null check
   if (player == NULL) {
-    flog_v("Player passed into processKeystroke is NULL");
+    log_v("Player passed into processKeystroke is NULL");
     return;
   }
 
   if (keyMessage == NULL) {
-    flog_v("keyMessage passed into processKeystroke is NULL");
+    log_v("keyMessage passed into processKeystroke is NULL");
     return;
   }
 
@@ -879,18 +874,18 @@ static void processKeystroke(game_t* game, player_t* player, char* keyMessage) {
   int currY = player->y;
 
   //dx, dy -> distance player will move by
-  int* dx = 0;
-  int* dy = 0;
+  int dx = 0;
+  int dy = 0;
 
   //if uppercase key pressed, we want to keep moving until we can't
-  bool keepMoving* = false;
+  bool keepMoving = false;
 
   char keystroke = keyMessage[0];
-  flog_v("Processing player input...\n");
+  log_v("Processing player input...\n");
 
   //handle QUIT (q)
   if ((keystroke == 'Q')|| (keystroke == 'q')) {
-    flog_v("Player requested to quit. \n");
+    log_v("Player requested to quit. \n");
 
     message_send(player->port, "You have QUIT");
     return;
@@ -927,7 +922,7 @@ static void processKeystroke(game_t* game, player_t* player, char* keyMessage) {
 static void moveByKey(char key, int* dx, int* dy, bool* keepMoving) {
   *dx = 0;
   *dy = 0;
-  **keepMoving = false;
+  *keepMoving = false;
 
   switch (key) {
     //lower case keystrokes
@@ -949,11 +944,11 @@ static void moveByKey(char key, int* dx, int* dy, bool* keepMoving) {
     case 'Y': *dx = -1; *dy= -1; *keepMoving = true; return;  //move diagonally up and left, if possible
     case 'U': *dx = 1; *dy = 1;  *keepMoving = true; return;  //move diagonally up and right, if possible
     case 'B': *dx = -1; *dy = -1;  *keepMoving = true; return;   //move diagonally down and left, if possible
-    case 'N': *dx = 1; **dy = -1;  *keepMoving = true; return;   //move diagonally down and right, if possible
+    case 'N': *dx = 1; *dy = -1;  *keepMoving = true; return;   //move diagonally down and right, if possible
 
     //if invalid key
     default:
-      flog_v("Invalid input received.\n");
+      log_v("Invalid input received.\n");
       return;
   }
 }
@@ -965,12 +960,6 @@ static void moveByKey(char key, int* dx, int* dy, bool* keepMoving) {
  */
 static void game_spectate(game_t* game, addr_t clientAddress) {
 
-  //NULL checks
-  if (game == NULL || clientAddress == NULL) {
-    log_e("ERROR: game or clientAddress passed into game_spectate is NULL");
-    return;
-  }
-
   //currentSpectator of the game if there is one
   addr_t currentSpectator = game->spectator;
 
@@ -980,7 +969,7 @@ static void game_spectate(game_t* game, addr_t clientAddress) {
   if (!message_eqAddr(currentSpectator, clientAddress)) {
 
     //if there is a current spectator, notify them and kick (false means there is a current spectator)
-    if (!message_eqAddr(currentSpectator, message_noAddr)) {
+    if (!message_eqAddr(currentSpectator, message_noAddr())) {
       message_send(currentSpectator, "QUIT You have been replaced by a new spectator.");
     }
 
@@ -1003,8 +992,8 @@ static void game_spectate(game_t* game, addr_t clientAddress) {
     log_e("ERROR: memory could not be allocated for gold_message in game_spectate");
   }
 
-  snprintf(gold_message, sizeof(goldMessage), "GOLD 0 0 %d", goldLeft);
-  message_send(clientAddress, goldMessage);
+  snprintf(gold_message, sizeof(gold_message), "GOLD 0 0 %d", goldLeft);
+  message_send(clientAddress, gold_message);
 
 
   // Sending the GRID message
@@ -1046,7 +1035,7 @@ static void game_end(game_t* game) {
 
   //table summary of game results
   size_t* summary_size = 1000;
-  char* game_summary = calloc(1, summary_size*sizeof(char));
+  char* game_summary = calloc(1, summary_size);
   
   //check if memory was allocated
   if (game_summary == NULL) {
@@ -1110,7 +1099,7 @@ static void player_delete(player_t* player, game_t* game) {
   for (int i = 0; i<game->totalPlayers; i++) {
 
     //if the player_array exists and player[i]'s letter matches player Letter
-    if(game->player_array[i] != NULL && game->player_array[i]->playerLetter == player->letter) {
+    if(game->player_array[i] != NULL && game->player_array[i]->letter == player->letter) {
       game->player_array[i] = NULL;  //set pointer to NULL
       break;
     }
@@ -1118,7 +1107,7 @@ static void player_delete(player_t* player, game_t* game) {
 
   //free memory
   delete_grid(player->grid);
-  free(player->name);
+  free(player->username);
   free(player);
 }
 
