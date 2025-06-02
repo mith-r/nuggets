@@ -10,9 +10,9 @@
 #include <unistd.h>
 #include <time.h>
 
-#include "log.h"
-#include "message.h"
-#include "grid.h"
+#include "../support/log.h"
+#include "../support/message.h"
+#include "../grid/grid.h"
 
 /*
  * player struct
