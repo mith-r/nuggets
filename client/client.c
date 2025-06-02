@@ -94,7 +94,7 @@ static bool validateArgs(const int argc, const char* argv[]){
 /************ setUpDisplay ************/
 /* Initializes ncurses display with given grid dimensions */
 static void setUpDisplay(int nrows, int ncols){
-scr(); //initialize ncurses
+    initscr(); //initialize ncurses
     cbreak(); //diables line buffering
     noecho(); //don't echo typed characters on screen
 
