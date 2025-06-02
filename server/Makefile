@@ -2,7 +2,7 @@
 # 
 
 OBJS = server.o
-LIBS = support/support.a
+LIBS =  ../grid/grid.o ../grid/file.o ../support/message.o ../support/log.o
 
 CFLAGS = -Wall -pedantic -std=gnu11 -ggdb -Isupport
 CC = gcc
@@ -11,7 +11,7 @@ MAKE = make
 all: server
 
 server: $(OBJS) $(LIBS)
-	$(CC) $(CFLAGS) $(OBJS) $(LIBS) -o server
+	$(CC) $(CFLAGS) $(OBJS) $(LIBS) -o server -lm
 
 
 .PHONY: all test clean
