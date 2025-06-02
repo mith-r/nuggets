@@ -442,7 +442,9 @@ static void sendDisplayMessage(game_t* game, addr_t to) {
 }
 
 
-//instantiates new player struct
+/*
+ * Instantiates new player struct
+ */
 player_t* player_new(char* username, game_t* game, addr_t playerAddress) {
 
   //check if under max players (26)
@@ -457,15 +459,16 @@ player_t* player_new(char* username, game_t* game, addr_t playerAddress) {
       return NULL;
     }
 
-    //if addresses matches
+    //if addresses is valid
     if (message_isAddr(playerAddress)) {
       newPlayer->port = playerAddress;
     }
-
+    //else invalid, set player's port to no address
     else {
       newPlayer->port = message_noAddr();
     }
 
+    //allocate memory for player's username
     newPlayer->username = malloc(sizeof(char)*strlen(username)+1);
     strcpy(newPlayer->username, username);
     newPlayer->purse = 0;
@@ -501,13 +504,25 @@ player_t* player_new(char* username, game_t* game, addr_t playerAddress) {
         //fullMap is updated to reflect player placed at that spot
         point_t* globalPoint = grid_get(game->fullMap, newPlayer->x, newPlayer->y);
         point_setPlayer(globalPoint, newPlayer->letter);
+        //add new player to player_array
+        game->player_array[game->totalPlayers] = newPlayer;
+        game->totalPlayers++;  //increment player count
+        return newPlayer;
     }
 
-    //add new player to player_array
-    game->player_array[game->totalPlayers] = newPlayer;
-    game->totalPlayers++;  //increment player count
-    return newPlayer; 
+    //else assignRandomSpot failed (false)
+    else {
+      log_v("ERROR: newPlayer was unable to be assigned a random spot");
+      exit(2);
+    }
   }
+
+  //else game is full
+  else {
+    log_v("ERROR: MAX number of players exceeded");
+    message_send(playerAddress, "QUIT Game is full: no more players can join.");
+  }
+  return NULL;
 }
 
 //assigns gold to player
