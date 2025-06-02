@@ -1,4 +1,4 @@
-# Makefile for nuggets
+# Makefile for server
 # 
 
 OBJS = server.o
@@ -19,13 +19,12 @@ server: $(OBJS) $(LIBS)
 support/support.a:
 	$(MAKE) -C support
 
-# test: servertest
-# 	chmod +x ./testing.sh
-# 	bash -v ./testing.sh &> testing.out
+test:
+	chmod +x ./testing.sh
+	bash ./testing.sh &> testing.out
 
 clean:
 	rm -rf *.dSYM  # MacOS debugger info
 	rm -f *~ *.o
 	rm -f server
-#rm -f client
 	rm -f core
