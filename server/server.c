@@ -71,21 +71,14 @@ static char pointValToChar(int pointVal);
 char* displayGame(game_t* game, addr_t fromClient);
 static void processKeystroke(game_t* game, player_t* player, const char* keyMessage);
 static void moveByKey(char key, int* dx, int* dy, bool* keepMoving);
-
-
 static void sendGridMessage(game_t* game, addr_t to);
 static void sendGoldMessage(int goldCollected, int purse, int goldRemaining, addr_t to);
 static void sendDisplayMessage(game_t* game, addr_t to);
 bool processMessage(void* arg, addr_t clientAddress, const char* message);
-
-
 static void game_spectate(game_t* game, addr_t clientAddress);
 static void game_end(game_t* game);
-
-
 static void player_delete(player_t* player, game_t* game);
 static void game_delete(game_t* game);
-
 
 
 //global constants
@@ -120,18 +113,14 @@ int main (int argc, char* argv[]) {
 
   log_v("Game has been initialized");
   game_start(game);
-
   game_end(game);
-
 
   //cleaning up
   log_v("Freeing memory in main");
   free(mapFile);
   free(seed);
-  
 
   log_done();
-
   game_delete(game);
   return 0;
 }
