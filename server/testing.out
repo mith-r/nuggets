@@ -1,0 +1,18 @@
+START OF LOG
+ERROR: too few arguments provided
+Test passed: caught too few parameters
+START OF LOG
+ERROR: too many arguments provided
+Test passed: caught too many parameters
+START OF LOG
+ERROR: mapFile could not be opened
+END OF LOG
+Test passed: caught invalid mapFile
+START OF LOG
+Seed inputted: -1
+Invalid seed given
+Test passed: caught invalid optional seed
+START OF LOG
+Seed inputted: hi
+Invalid seed given
+Test passed: caught invalid optional seed
