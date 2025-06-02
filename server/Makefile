@@ -1,4 +1,4 @@
-# Makefile for nuggets
+# Makefile for server
 # 
 
 OBJS = server.o

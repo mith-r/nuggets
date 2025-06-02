@@ -203,7 +203,7 @@ int validateSeed(char* seed) {
     //if character is not a digit, it is an invalid seed
     if (isdigit(seed[i]) == 0) {
       log_v("Invalid seed given");
-      exit(1);
+      exit(5);
     }
   }
 
