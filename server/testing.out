@@ -6,11 +6,8 @@ START OF LOG
 ERROR: mapFile could not be opened
 END OF LOG
 START OF LOG
-ERROR: mapFile could not be opened
-END OF LOG
+Seed inputted: -1
+Invalid seed given
 START OF LOG
-ERROR: mapFile could not be opened
-END OF LOG
-START OF LOG
-ERROR: mapFile could not be opened
-END OF LOG
+Seed inputted: hi
+Invalid seed given
