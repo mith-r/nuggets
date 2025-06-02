@@ -291,7 +291,7 @@ bool game_start(game_t* game) {
     return false;
   }
 
-  log_v("Server port: %d");
+  log_d("Server port: %d", port);
   bool isReceiving = message_loop(game, 0, NULL, NULL, processMessage);
   
   if (!isReceiving) {
