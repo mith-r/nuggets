@@ -186,23 +186,28 @@ static bool handleInput(void* arg){
         if(character == 'Q'){ //spectator only allowed to type 'Q'
             msg = "KEY Q";
             messageServer(*address, msg);
+            return true;
         } else{
             log_v("Spectator only allowed to send 'Q'\n");
+            return false;
         }
-
     }
 
     msg = malloc(6); //"KEY" + char + '\0'
     if(msg == NULL){
         log_v("Error: Malloc failed\n");
-    } else{
-        log_s("Sent message: %s\n", msg);
-        messageServer(*address, msg);
+        return false;
     }
+    
+    sprintf(msg, "KEY %c", character);
+    log_s("Sent message: %s\n", msg);
+    messageServer(*address, msg);
 
+    bool shouldQuit = (character=='Q');
     free(msg);
-    return false; //keep message_loop running
-}
+    return shouldQuit; 
+} 
+
 
 /************ handleMessage ************/
 /* Handles messages received from the server and updates client state */
@@ -212,12 +217,12 @@ static bool handleMessage(void* arg, const addr_t address, const char* input){
         return true;
     }
     //handle "QUIT"
-    if(strncmp(input,"QUIT",strlen("QUIT")==0)){
+    if(strncmp(input,"QUIT",strlen("QUIT"))==0){
         exitGame(input);
         return true;
     }
     //handle "OK"
-    if(strncmp(input,"OK", strlen("OK")==0)){
+    if(strncmp(input,"OK", strlen("OK"))==0){
         if(strlen(input)!=4){
             log_v("Error: Incorrect OK message fomat in handleMessage\n");
             return true;
@@ -226,7 +231,7 @@ static bool handleMessage(void* arg, const addr_t address, const char* input){
         return false;
     }
     //handle "GRID"
-    if(strncmp(input,"GRID", strlen("GRID")==0)){
+    if(strncmp(input,"GRID", strlen("GRID"))==0){
         parseMap(input); //set map rows and columns
         setUpDisplay(nrows, ncols);
         
@@ -240,7 +245,7 @@ static bool handleMessage(void* arg, const addr_t address, const char* input){
                 signal(SIGWINCH, handleResize);
                 getmaxyx(stdscr, height, width); //updated window
                 char character = getch(); //wait for input
-                if(character == "\n" && (height>nrows&&width>ncols)){ //if enter and big enough scren
+                if(character == '\n' && (height>nrows&&width>ncols)){ //if enter and big enough scren
                     sizeCheck = false;
                 }
             }
@@ -256,18 +261,18 @@ static bool handleMessage(void* arg, const addr_t address, const char* input){
         return false;
     }
     //handle "DISPLAY"
-    if(strncmp(input, "DISPLAY", strlen("DISPLAY")==0)){
+    if(strncmp(input, "DISPLAY", strlen("DISPLAY"))==0){
         strcpy(map, input + strlen("DISPLAY "));
         showDisplay();
         return false;
     }
     //handle "GOLD"
-    if(strncmp(input, "GOLD", strlen("GOLD")==0)){
+    if(strncmp(input, "GOLD", strlen("GOLD"))==0){
         parseGold(input);
         return false;
     }
     //handle "ERROR"
-    if(strncmp(input, "ERROR", strlen("ERROR")==0)){
+    if(strncmp(input, "ERROR", strlen("ERROR"))==0){
         if (strlen(input) <= strlen("ERROR")){
             log_v("ERROR: Empty or malformed ERROR message.\n");
             return false;  
@@ -427,5 +432,57 @@ static void cleanGame(void){
     free(address);
     address = NULL;
   }
+}
+
+/************ main ************/
+/* Main function that runs the program by calling appropriate functions */
+int main(const int argc, const char* argv[]){
+
+  // Validate command-line arguments before proceeding
+  bool validate = validateArgs(argc, argv);
+  if (validate) {
+    
+    //Allocating memory 
+    map = malloc(sizeof(char*) * 500 * 500);
+    playerName = malloc(MaxNameLength + 1);
+    playMessage = malloc(strlen("PLAY ") + MaxNameLength + 1);
+    addedMessage = malloc(sizeof(char*) + 25);
+    displayMessage = malloc(sizeof(char*) + 25);
+    serverHost = malloc(strlen(argv[1]) + 1);
+    serverPort = malloc(strlen(argv[2]) + 1);
+
+    log_init(stderr);
+
+    //Store the server hostname and port
+    strcpy(serverHost, argv[1]);
+    strcpy(serverPort, argv[2]);
+
+    address = malloc(sizeof(addr_t));
+
+    //Handle spectator
+    if (argc == 3) {
+      isSpectator = true;
+    }
+
+    //Handle player
+    if (argc == 4) {
+      strcpy(playerName, argv[3]);
+      char* play = "PLAY ";
+      strcpy(playMessage, play);
+      strcat(playMessage, playerName); // build message to send to server
+    }
+
+    //Start the process of the game
+    serverComs(serverHost, serverPort);
+
+  }
+
+  //Handle invalid command-line arguments
+  else {
+    fprintf(stderr, "Command line arguments failed\n");
+    return 1;
+  }
+  cleanGame();
+  return 0;
 }
 
