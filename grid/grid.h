@@ -16,7 +16,7 @@
 #include <string.h>
 #include <stdbool.h>
 
-typedef struct cell point_t;
+typedef struct point point_t;
 typedef struct grid grid_t;
 
 /**************** CORE GRID FUNCTIONS ****************/
