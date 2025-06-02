@@ -16,7 +16,15 @@
 #include <string.h>
 #include <stdbool.h>
 
-typedef struct cell point_t;
+typedef struct point
+{                      // represents a single cell on the grid
+    char character;    // Character on the map (.,#,-, etc.)
+    char playerLetter; // player letter (A, B, ...)
+    int val;           // numeric code for terrain type - maybe make a boolean
+    int nuggetCount;   // Number of nuggets at this cell
+    bool isVisible;    // Whether this cell is visible to the player
+    bool visibleGold;  // is gold present but hidden
+} point_t;
 typedef struct grid grid_t;
 
 /**************** CORE GRID FUNCTIONS ****************/
