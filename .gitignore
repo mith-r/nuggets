@@ -36,9 +36,3 @@ Icon?
 
 ###########################################################################
 # custom additions below here; see also .gitignore files in subdirectories.
-
-# emacs file
-TAGS
-
-# Do NOT push data files to git.
-# I suggest you create crawler/indexer output in subdirectories of ./data
