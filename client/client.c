@@ -240,7 +240,7 @@ static bool handleMessage(void* arg, const addr_t address, const char* input){
                 signal(SIGWINCH, handleResize);
                 getmaxyx(stdscr, height, width); //updated window
                 char character = getch(); //wait for input
-                if(character == "\n" && (height>nrows&&width>ncols)){ //if enter and big enough scren
+                if(character == '\n' && (height>nrows&&width>ncols)){ //if enter and big enough scren
                     sizeCheck = false;
                 }
             }
