@@ -17,8 +17,9 @@ client: client.o $(LIB)
 
 client.o: $(LIB)
 
+
 test: $(PROGS)
-	bash ./testing.sh
+	bash ./testing.sh &> testing.out
 
 clean:
 	rm -f *.o
