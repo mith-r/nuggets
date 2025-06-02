@@ -534,38 +534,38 @@ bool assignRandomSpot(player_t* player, game_t* game) {
   srand(time(NULL));  // produce a random number each time program runs
 
   bool assignedSpot = false;  //whether a player was assigned a random spot
+
+  log_v("Trying to assign player a random spot");
   int numRows = grid_getNumRows(game->fullMap);
   int numCols = grid_getNumCols(game->fullMap);
 
-  //if player hasn't been assigned a spot, give player random coordinates
-  if (!assignedSpot) {
-      int randomX = rand()%(numRows+1);  //random number between 0, and max (inclusive)
-      int randomY = rand()%(numCols+1);
+  //if player hasn't been assigned a valid spot, keep trying to give player random coordinates
+  while (!assignedSpot) {
+      int randomX = rand()%(numRows);  //random number between 0, and max (inclusive)
+      int randomY = rand()%(numCols);
 
       //getting that point in the map
-      point_t* randomPoint = grid_get(game->fullMap, randomX, randomY);
-      int pointVal = point_getVal(randomPoint);
+      point_t* randomPosition = grid_get(game->fullMap, randomX, randomY);
+      int pointVal = point_getVal(randomPosition);
 
-      //check if valid point (1 means inside a room)
+      //check if valid point (1 means inside a room), give the player those random coordinates
       if (pointVal == 1) {
           player->x = randomX;
           player->y = randomY;
 
-          //update the position 
-          // randomPosition->id = player->letter;
-          // assignedSpot = true;
-      }
-
-      else {
-        log_v("Could not assign random spot for player");
-      }
-
-      //if spot wasn't assigned (x,y are still default 0,0)
-      if (player->x == 0 && player->y == 0) {
-        return false;
+          //update the position, set that point on the map to that player's letter
+          randomPosition->character = player->letter;
+          assignedSpot = true;
       }
   }
+
+  //if spot wasn't assigned (x,y are still default 0,0)
+  if (player->x == 0 && player->y == 0) {
+    log_v("Could not assign random spot for player");
+    return false;
+  }
   
+  log_v("Player was sucessfully assigned a random spot");
   return true;  //true if randomly assigned a position for player
 }
 
