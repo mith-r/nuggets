@@ -70,9 +70,6 @@ point_t *grid_get(grid_t *grid, int row, int col)
         printf("row: %d", row);
         printf("\ncol: %d", col);
         return grid->map[row][col];
-
-
-        
     }
 
 
