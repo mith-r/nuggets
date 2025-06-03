@@ -836,7 +836,6 @@ static bool movePlayer(game_t* game, player_t* player, int currX, int currY, int
       game->totalGoldCollected += numGold;
       game->goldRemaining = GoldTotal - game->totalGoldCollected;
       
-      game->totalGoldCollected += numGold;
       point_setNuggets(newGlobalPoint, 0);
     }
 
