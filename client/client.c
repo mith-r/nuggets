@@ -200,7 +200,7 @@ static bool handleInput(void* arg){
     }
     
     sprintf(msg, "KEY %c", character);
-    log_s("Sent message: KEY %s\n", msg);
+    log_s("Sent message: %s\n", msg);
     messageServer(*address, msg);
 
     bool shouldQuit = (character=='Q' || character=='q'); 
