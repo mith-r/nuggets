@@ -222,13 +222,13 @@ static bool handleMessage(void* arg, const addr_t address, const char* input){
         return true;
     }
     //handle "OK"
-    if(strncmp(input,"OK", strlen("OK"))==0){
-        if(strlen(input)!=4){
-            log_v("Error: Incorrect OK message fomat in handleMessage\n");
-            return true;
+    if (strncmp(input, "OK ", strlen("OK ")) == 0) {
+        /* attempt to pull exactly one character after the space */
+        if (sscanf(input, "OK %c", &playerChar) == 1) {
+            return false;                  /* parsed cleanly → keep looping */
         }
-        playerChar = input[3]; //extract player character (4th)
-        return false;
+        log_v("Malformed OK message in handleMessage\n");
+        return true;                       /* fatal protocol error → end loop */
     }
     //handle "GRID"
     if(strncmp(input,"GRID", strlen("GRID"))==0){
