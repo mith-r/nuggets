@@ -352,10 +352,10 @@ bool processMessage(void* arg, addr_t clientAddress, const char* message) {
       if (player != NULL) {
         processKeystroke(game, player, key);  //process the player's keystrokes/movement
 
-        player = findPlayerByAddress(game, clientAddress);
-        if (player == NULL) {
-          return false;
-        }
+       // player = findPlayerByAddress(game, clientAddress);
+        //if (player == NULL) {
+          //return false;
+        //}
 
         sendGoldMessage(player->justCollected, player->purse, game->goldRemaining, clientAddress);
         sendDisplayMessage(game, clientAddress);
