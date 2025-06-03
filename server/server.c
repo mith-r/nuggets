@@ -351,6 +351,12 @@ bool processMessage(void* arg, addr_t clientAddress, const char* message) {
 
       if (player != NULL) {
         processKeystroke(game, player, key);  //process the player's keystrokes/movement
+
+        player = findPlayerByAddress(game, clientAddress);
+        if (player == NULL) {
+          return false;
+        }
+
         sendGoldMessage(player->justCollected, player->purse, game->goldRemaining, clientAddress);
         sendDisplayMessage(game, clientAddress);
 
@@ -737,7 +743,7 @@ char* displayGame(game_t* game, addr_t fromClient) {
     // add newline after each row
     strcat(display, "\n");
 }
-  printf("RAW DISPLAY:\n%s\n", display);
+  //printf("RAW DISPLAY:\n%s\n", display);
   return display;
 }
 
