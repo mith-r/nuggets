@@ -352,10 +352,11 @@ static void showDisplay(void){
 /************ parseGold ************/
 static void parseGold(const char* input){
 
-    int curr;
+    int curr = 0; //how much you just collected
+    int purse = 0; //how much each individual client has
 
     //Parse messages and ensure success
-    if ((sscanf(input+5, "%d %d %d", &curr, &total, &remaining)) != 3) {
+    if ((sscanf(input+5, "%d %d %d", &curr, &purse, &remaining)) != 3) {
         return;
     }
 
@@ -365,15 +366,16 @@ static void parseGold(const char* input){
         return;
     }
 
-    collected += curr; 
+    purse +=curr;
+    collected += purse; 
     if (collected>total){
         messageServer(*address, "KEY Q");
     } else if (curr > 0) {
-        sprintf(displayMessage, "Player %c has %d nuggets (%d unclaimed).", playerChar, collected, remaining);
+        sprintf(displayMessage, "Player %c has %d nuggets (%d unclaimed).", playerChar, purse, remaining);
         addExtra = true;
         showGold = true;
     } else {
-        sprintf(displayMessage, "Player %c has %d nuggets (%d unclaimed).", playerChar, collected, remaining);
+        sprintf(displayMessage, "Player %c has %d nuggets (%d unclaimed).", playerChar, purse, remaining);
         showGold = false;
     }
 
