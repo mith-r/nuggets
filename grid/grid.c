@@ -40,7 +40,7 @@ typedef struct grid
 /* See grid.h for more info */
 grid_t *grid_new()
 {
-    grid_t* grid = malloc(sizeof(grid_t));
+    grid_t* grid = calloc(1,sizeof(grid_t));
 
     if (grid == NULL)
     {
@@ -56,7 +56,7 @@ grid_t *grid_new()
 /*See grid.h for more info*/
 void grid_insert(grid_t *grid, point_t *point, int row, int col)
 {   
-    if (grid != NULL && point!= NULL && row>0 && col>0) {
+    if (grid != NULL && point!= NULL && row>=0 && col>=0) {
         grid->map[row][col] = point;
     }
 }
@@ -66,9 +66,6 @@ void grid_insert(grid_t *grid, point_t *point, int row, int col)
 point_t *grid_get(grid_t *grid, int row, int col)
 {
     if (grid != NULL) {
-
-        printf("row: %d", row);
-        printf("\ncol: %d", col);
         return grid->map[row][col];
     }
 
@@ -125,7 +122,7 @@ void grid_setNumCols(grid_t *grid, int numCols)
 point_t *point_new(char character)
 {
     point_t *point = malloc(sizeof(point_t));
-    if (point == NULL || isspace((unsigned char)character))
+    if (point == NULL)
     {
         return NULL;
     }
