@@ -581,10 +581,14 @@ bool assignRandomSpot(player_t* player, game_t* game) {
 //finds player by address
 player_t* findPlayerByAddress(game_t* game, addr_t addr) {
 
+  if (game == NULL) {
+    return NULL;
+  }
+
   //loop through player array and find that player based on their address
   for (int i =0; i<game->totalPlayers; i++) {
     //if the player address matches what is stored for the player in game
-    if(message_eqAddr(addr, game->player_array[i]->port)) {
+    if(game->player_array[i] && message_eqAddr(addr, game->player_array[i]->port)) {
         return game->player_array[i];
     } 
   }
