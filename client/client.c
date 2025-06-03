@@ -178,13 +178,13 @@ static bool handleInput(void* arg){
     char* msg;
 
     if(character == EOF){
-        messageServer(*address, "KEY Q");
+        messageServer(*address, "Q");
         return true;
     }
 
     if(isSpectator){
         if(character == 'Q' || character=='q'){ //spectator only allowed to type 'Q'
-            msg = "KEY Q";
+            msg = "Q";
             messageServer(*address, msg);
             return true;
         } else{
@@ -199,7 +199,7 @@ static bool handleInput(void* arg){
         return false;
     }
     
-    sprintf(msg, "KEY %c", character);
+    sprintf(msg, "%c", character);
     log_s("Sent message: %s\n", msg);
     messageServer(*address, msg);
 
@@ -350,10 +350,12 @@ static void showDisplay(void){
 }
 
 /************ parseGold ************/
-static void parseGold(const char* input)
-{
+static void parseGold(const char* input){
+
+    int curr;
+
     //Parse messages and ensure success
-    if ((sscanf(input+5, "%d %d %d", &collected, &total, &remaining)) != 3) {
+    if ((sscanf(input+5, "%d %d %d", &curr, &total, &remaining)) != 3) {
         return;
     }
 
@@ -363,14 +365,15 @@ static void parseGold(const char* input)
         return;
     }
 
-    if (collected > 0) {
-        sprintf(displayMessage, "Player %c has %d nuggets (%d unclaimed).", playerChar, total, remaining);
-        sprintf(addedMessage, " GOLD received: %d", collected);
+    collected += curr; 
+    if (collected>total){
+        messageServer(*address, "Q");
+    } else if (curr > 0) {
+        sprintf(displayMessage, "Player %c has %d nuggets (%d unclaimed).", playerChar, collected, remaining);
         addExtra = true;
         showGold = true;
-    }
-    else {
-        sprintf(displayMessage, "Player %c has %d nuggets (%d unclaimed).", playerChar, total, remaining);
+    } else {
+        sprintf(displayMessage, "Player %c has %d nuggets (%d unclaimed).", playerChar, collected, remaining);
         showGold = false;
     }
 
