@@ -251,17 +251,18 @@ grid_t *initializeMap(FILE *fp)
 
     grid_t *grid = grid_new();
 
-    char *line;
+    char *line; 
     int numRows = 0;
     numRows = file_numLines(fp);
     int numCols = 0;
     int track_cols = 0;
 
+    //Loop through each row in the file
     for (int i = 0; i < numRows; i++)
     {
         line = file_readLine(fp);
         char *chars = line;
-        while (*chars != '\0')
+        while (*chars != '\0') // Iterate through each character until the end of the string
         {
             point_t *point = point_new(chars[0]);
 
@@ -311,6 +312,7 @@ grid_t *initializeMap(FILE *fp)
     grid_setNumCols(grid, numCols);
     grid_setNumRows(grid, numRows);
 
+    // Return pointer to the fully initialized grid
     return grid;
 }
 
@@ -390,7 +392,7 @@ void randomizeGold(grid_t *grid, int minPiles, int maxPiles, int totalGold)
 /*Consistent update of what is visible to the player given their location*/
 void mapUpdate(grid_t *playerGrid, int playerRow, int PlayerColumn)
 {
-
+    // Get total number of rows and columns in the player's grid
     int totalRows = grid_getNumRows(playerGrid);
     int totalCols = grid_getNumCols(playerGrid);
     point_t *origin = grid_get(playerGrid, playerRow, PlayerColumn);
@@ -398,11 +400,14 @@ void mapUpdate(grid_t *playerGrid, int playerRow, int PlayerColumn)
     // If the player is on a passage, reveal it and any adjacent passages
     int originType = point_getVal(origin);
 
+    //handle if player is standing on a passage
     if (originType == 3)
     {
+        //make visible
         point_setVisibility(origin, true);
         grid_insert(playerGrid, origin, playerRow, PlayerColumn);
 
+        //check adjacent points
         point_t *up = grid_get(playerGrid, playerRow - 1, PlayerColumn);
         if (point_getVal(up) == 3)
         {
@@ -439,6 +444,7 @@ void mapUpdate(grid_t *playerGrid, int playerRow, int PlayerColumn)
         {
             point_t *current = grid_get(playerGrid, row, col);
 
+            // Check current visibility and gold presence
             bool wasVisible = point_getVisibility(current);
             int goldHere = point_getNuggets(current);
 
@@ -453,15 +459,17 @@ void mapUpdate(grid_t *playerGrid, int playerRow, int PlayerColumn)
                 continue; // skip solid rock
 
             bool blocked = false;
-            int rowDelta = abs(playerRow - row);
-            int colDelta = abs(PlayerColumn - col);
+            int rowDelta = abs(playerRow - row); // Vertical distance from player
+            int colDelta = abs(PlayerColumn - col); // Horizontal distance from player
             int rStart, rEnd, cStart, cEnd;
 
+            // Check horizontal line-of-sight (player on same row as target)
             if (playerRow == row)
             {
                 cStart = (PlayerColumn < col) ? PlayerColumn + 1 : col + 1;
                 cEnd = (PlayerColumn < col) ? col : PlayerColumn;
 
+                // Check cells horizontally for obstacles
                 for (int x = cStart; x < cEnd; x++)
                 {
                     int terrain = point_getVal(grid_get(playerGrid, row, x));
@@ -472,6 +480,7 @@ void mapUpdate(grid_t *playerGrid, int playerRow, int PlayerColumn)
                     }
                 }
             }
+            // Check if vertical offset is at least one
             else if (rowDelta >= 1)
             {
                 cStart = (PlayerColumn < col) ? PlayerColumn + 1 : col + 1;
@@ -489,13 +498,14 @@ void mapUpdate(grid_t *playerGrid, int playerRow, int PlayerColumn)
                     }
                 }
             }
-
+            // Check vertical visibility
             if (rowDelta > 1)
             {
                 rStart = (playerRow < row) ? playerRow + 1 : row + 1;
                 rEnd = (playerRow < row) ? row : playerRow;
                 int steps = 0;
 
+                // Loop through each intermediate row
                 for (int r = rStart; r < rEnd; r++)
                 {
                     steps++;
@@ -537,6 +547,7 @@ void mapUpdate(grid_t *playerGrid, int playerRow, int PlayerColumn)
                 }
             }
 
+            // If visibility isn't blocked, set the point visible
             if (!blocked)
             {
                 point_setVisibility(current, true);
@@ -546,6 +557,8 @@ void mapUpdate(grid_t *playerGrid, int playerRow, int PlayerColumn)
                 }
                 grid_insert(playerGrid, current, row, col);
             }
+            
+            // If blocked but previously visible with gold, maintain visible gold
             else if (wasVisible && goldHere > 0)
             {
                 current->visibleGold = true;
