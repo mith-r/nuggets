@@ -272,7 +272,6 @@ game_t* game_new(char* mapFile) {
 
 
 
-
 //starts the game and listens for incoming messages
 bool game_start(game_t* game) {
 
@@ -378,7 +377,6 @@ bool processMessage(void* arg, addr_t clientAddress, const char* message) {
     return false;  //continue game loop
   }
 }
-
 
 
 /*
@@ -533,9 +531,9 @@ void assignGoldToPlayer(player_t* player, game_t* game) {
 }
 
 
-
-
-//assigns a random spot for a player
+/*
+ * Assigns a random spot to a player on the map
+ */
 bool assignRandomSpot(player_t* player, game_t* game) {
 
   srand(time(NULL));  // produce a random number each time program runs
@@ -592,13 +590,12 @@ player_t* findPlayerByAddress(game_t* game, addr_t addr) {
         return game->player_array[i];
     } 
   }
-
   return NULL;
 }
 
-
-
-//finds player by letter
+/*
+ * Finds player by their letter
+ */
 player_t* findPlayerByLetter(game_t* game, char playerLetter) {
     
   //null check
@@ -617,8 +614,6 @@ player_t* findPlayerByLetter(game_t* game, char playerLetter) {
   }
   return NULL;  //return NULL if player could not be found
 }
-
-
 
 //display the game for client (local view for player, full view for spectator)
 char* displayGame(game_t* game, addr_t fromClient) {
@@ -686,8 +681,8 @@ char* displayGame(game_t* game, addr_t fromClient) {
             else if (point_getVisibility(localPoint)) {
                 //if no player is at that point
                 if (playerLetter == ' ') {
-                    //if gold is not visible
-                    if (!localPoint->visibleGold) {
+                    //if gold is not visible (false)
+                    if (localPoint->visibleGold) {
                         //show the terrain at that point
                         mapSymbol = pointValToChar(point_getVal(localPoint));
                     }
