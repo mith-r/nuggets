@@ -67,9 +67,6 @@ point_t *grid_get(grid_t *grid, int row, int col)
 {
     if (grid != NULL) {
         return grid->map[row][col];
-
-
-        
     }
 
 
