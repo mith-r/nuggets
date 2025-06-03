@@ -627,7 +627,6 @@ player_t *findPlayerByAddress(game_t *game, addr_t addr)
       return game->player_array[i];
     }
   }
-
   return NULL;
 }
 
