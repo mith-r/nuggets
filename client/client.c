@@ -352,29 +352,25 @@ static void showDisplay(void){
 /************ parseGold ************/
 static void parseGold(const char* input)
 {
-    int newGold;
-    int totalGold;
-    int remainingGold;
-
     //Parse messages and ensure success
-    if ((sscanf(input+5, "%d %d %d", &newGold, &totalGold, &remainingGold)) != 3) {
+    if ((sscanf(input+5, "%d %d %d", &collected, &total, &remaining)) != 3) {
         return;
     }
 
     //If spectator display this message
     if (isSpectator) {
-        sprintf(displayMessage, "Spectator: %d nuggets unclaimed. Play at %s %s.", remainingGold, serverHost, serverPort);
+        sprintf(displayMessage, "Spectator: %d nuggets unclaimed. Play at %s %s.", remaining, serverHost, serverPort);
         return;
     }
 
-    if (newGold > 0) {
-        sprintf(displayMessage, "Player %c has %d nuggets (%d unclaimed).", playerChar, totalGold, remainingGold);
-        sprintf(addedMessage, " GOLD received: %d", newGold);
+    if (collected > 0) {
+        sprintf(displayMessage, "Player %c has %d nuggets (%d unclaimed).", playerChar, total, remaining);
+        sprintf(addedMessage, " GOLD received: %d", collected);
         addExtra = true;
         showGold = true;
     }
     else {
-        sprintf(displayMessage, "Player %c has %d nuggets (%d unclaimed).", playerChar, totalGold, remainingGold);
+        sprintf(displayMessage, "Player %c has %d nuggets (%d unclaimed).", playerChar, total, remaining);
         showGold = false;
     }
 
