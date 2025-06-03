@@ -616,7 +616,8 @@ char* displayGame(game_t* game, addr_t fromClient) {
   
   int numRows = grid_getNumRows(fullGrid);
   int numCols = grid_getNumCols(fullGrid);
-  int totalSpaces = (numRows*numCols+10);
+  // int totalSpaces = ((numRows+1)*numCols)+9;
+
 
   bool isSpectator = false;
   
@@ -635,7 +636,9 @@ char* displayGame(game_t* game, addr_t fromClient) {
 
   
   //string display will represent/display the entire game at that current moment
-  char* display = malloc((totalSpaces+1));
+  int totalSpaces = strlen("DISPLAY\n") + (numRows * numCols) + numRows + 1;
+  char* display = malloc(totalSpaces * sizeof(char));
+
 
   //check if memory was allocated
   if (display == NULL) {
@@ -667,12 +670,12 @@ char* displayGame(game_t* game, addr_t fromClient) {
         if (playerLetter == ' ') {
 
           //if gold is not visible to player
-          if (!localPoint->visibleGold) {
-            mapSymbol = pointValToChar(localPoint->playerLetter);
+          if (localPoint->visibleGold) {
+            mapSymbol = pointValToChar(point_getVal(localPoint));
           }
 
           //else if gold is visible to the player
-          else if (point_getNuggets(globalPoint)) {
+          else if (point_getNuggets(globalPoint) > 0) {
             mapSymbol = '*';
           }
 
@@ -706,7 +709,7 @@ char* displayGame(game_t* game, addr_t fromClient) {
           }
           //else display the terrain
           else {
-            pointValToChar(point_getVal(globalPoint));
+            mapSymbol = pointValToChar(point_getVal(globalPoint));
           }
         }
 
@@ -717,12 +720,15 @@ char* displayGame(game_t* game, addr_t fromClient) {
     }
 
       //concatenate symbol to the display/output string
-      strncat(display, &mapSymbol, 1);
+      char tmp[2] = { mapSymbol, '\0' };
+      strcat(display, tmp);
+
       }
 
     //add new line to end of each row
     strcat(display, "\n"); 
   }
+  printf("RAW DISPLAY:\n%s\n", display);
   return display;
 }
 
