@@ -178,13 +178,13 @@ static bool handleInput(void* arg){
     char* msg;
 
     if(character == EOF){
-        messageServer(*address, "Q");
+        messageServer(*address, "KEY Q");
         return true;
     }
 
     if(isSpectator){
         if(character == 'Q' || character=='q'){ //spectator only allowed to type 'Q'
-            msg = "Q";
+            msg = "KEY Q";
             messageServer(*address, msg);
             return true;
         } else{
@@ -200,7 +200,7 @@ static bool handleInput(void* arg){
     }
     
     sprintf(msg, "%c", character);
-    log_s("Sent message: %s\n", msg);
+    log_s("Sent message: KEY %s\n", msg);
     messageServer(*address, msg);
 
     bool shouldQuit = (character=='Q' || character=='q'); 
