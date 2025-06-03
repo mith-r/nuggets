@@ -117,8 +117,12 @@ int main (int argc, char* argv[]) {
 
   //cleaning up
   log_v("Freeing memory in main");
-  free(mapFile);
-  free(seed);
+  if (mapFile != NULL) {
+    free(mapFile);
+  }
+  if (seed != NULL) {
+    free(seed);
+  }
 
   log_done();
   game_delete(game);
@@ -133,13 +137,13 @@ void parseArgs(const int argc, char* argv[], char** mapFile, char** seed) {
 
     //if too few arguments
     if (argc < 2) {
-        log_v( "ERROR: too few arguments provided");
+        log_v( "Usage: ./server map.txt [seed]");
         exit(1);
     }
 
     //if to many arguments
     if (argc > 3) {
-        log_v("ERROR: too many arguments provided");
+        log_v("Usage: ./server map.txt [seed]");
         exit(2);
     }
 
@@ -396,7 +400,7 @@ static void sendGridMessage(game_t* game, addr_t to) {
       return;
   }
 
-  snprintf(grid_message, bufferSize, "GRID %d, %d", numRows, numCols);
+  snprintf(grid_message, bufferSize, "GRID %d %d", numRows, numCols);
   message_send(to, grid_message);
   free(grid_message);
 }
@@ -474,6 +478,9 @@ player_t* playerNew(const char* username, game_t* game, addr_t playerAddress) {
       exit(1);
     }
 
+    newPlayer->grid = initializeMap(fp);
+    fclose(fp);
+
     //give gold to player
     assignGoldToPlayer(newPlayer, game);
 
@@ -538,6 +545,7 @@ bool assignRandomSpot(player_t* player, game_t* game) {
   log_v("Trying to assign player a random spot");
   int numRows = grid_getNumRows(game->fullMap);
   int numCols = grid_getNumCols(game->fullMap);
+
 
   //if player hasn't been assigned a valid spot, keep trying to give player random coordinates
   while (!assignedSpot) {
@@ -616,7 +624,7 @@ char* displayGame(game_t* game, addr_t fromClient) {
   
   int numRows = grid_getNumRows(fullGrid);
   int numCols = grid_getNumCols(fullGrid);
-  int totalSpaces = (numRows*numCols+10);
+  int totalSpaces = (numRows*numCols*10);
 
   bool isSpectator = false;
   
@@ -635,7 +643,7 @@ char* displayGame(game_t* game, addr_t fromClient) {
 
   
   //string display will represent/display the entire game at that current moment
-  char* display = malloc((totalSpaces+1));
+  char* display = malloc((totalSpaces*10));
 
   //check if memory was allocated
   if (display == NULL) {
@@ -655,7 +663,7 @@ char* displayGame(game_t* game, addr_t fromClient) {
       //if client is a player (not spectator) display local grid
       if (!isSpectator) {
         point_t* localPoint = grid_get(localGrid, i, j);
-        char playerLetter;
+        char playerLetter = ' ';
 
         //check if point is within player's field of vision
         if (point_getVisibility(localPoint)) {
@@ -869,6 +877,8 @@ static void processKeystroke(game_t* game, player_t* player, const char* keyMess
     log_v("Player requested to quit. \n");
 
     message_send(player->port, "You have QUIT");
+    player_delete(player, game);
+    game->quitCount++;
     return;
   }
 
