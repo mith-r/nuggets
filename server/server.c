@@ -870,7 +870,7 @@ static void processKeystroke(game_t* game, player_t* player, const char* keyMess
   int dy = 0;
 
   //if uppercase key pressed, we want to keep moving until we can't
-  bool* keepMoving = false;
+  bool keepMoving = false;
 
   char keystroke = keyMessage[0];
   log_v("Processing player input...\n");
@@ -886,7 +886,7 @@ static void processKeystroke(game_t* game, player_t* player, const char* keyMess
   }
 
   //handle keystrokes
-  moveByKey(keystroke, &dx, &dy, keepMoving);
+  moveByKey(keystroke, &dx, &dy, &keepMoving);
   int newX = currX + dx;
   int newY = currY + dy;
 
@@ -913,7 +913,7 @@ static void processKeystroke(game_t* game, player_t* player, const char* keyMess
  * Processes LOWERCASE keys (move once)
  * Process UPPERCASE keys (move continuously until can't on map)
  */
-static void moveByKey(char key, int* dx, int* dy, bool* keepMoving) {
+static void moveByKey(char key, int* dx, int* dy, bool *keepMoving) {
   *dx = 0;
   *dy = 0;
   *keepMoving = false;
