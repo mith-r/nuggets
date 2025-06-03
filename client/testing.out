@@ -1,0 +1,11 @@
+bash ./testing.sh
+Testing too few command line entries
+Usage ./client hostname port [playername]
+Command line arguments failed
+Testing with too many command line entries
+Usage ./client hostname port [playername]
+Command line arguments failed
+Testing with invalid port number
+Error: invalid port number
+Command line arguments failed
+make: *** [Makefile:21: test] Error 1
