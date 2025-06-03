@@ -330,8 +330,8 @@ static void showDisplay(void){
 
     if(!isSpectator){
         int found = 0;
-        for (int row = 0; row <= nrows; row++) {
-            for (int col = 0; col <= ncols; col++) {
+        for (int row = 0; row < nrows; row++) {
+            for (int col = 0; col < ncols; col++) {
                 char ch = mvinch(row, col); // read the character at (row, col)
                 if (ch == '@') {
                     move(row, col); // move cursor to player's position
@@ -445,8 +445,8 @@ int main(const int argc, const char* argv[]){
     map = malloc(sizeof(char*) * 500 * 500);
     playerName = malloc(MaxNameLength + 1);
     playMessage = malloc(strlen("PLAY ") + MaxNameLength + 1);
-    addedMessage = malloc(sizeof(char*) + 25);
-    displayMessage = malloc(sizeof(char*) + 25);
+    addedMessage = malloc(sizeof(char*) * 100);
+    displayMessage = malloc(sizeof(char*) * 100);
     serverHost = malloc(strlen(argv[1]) + 1);
     serverPort = malloc(strlen(argv[2]) + 1);
 
