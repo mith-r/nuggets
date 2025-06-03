@@ -666,11 +666,16 @@ char* displayGame(game_t* game, addr_t fromClient) {
             point_t* localPoint = grid_get(localGrid, i, j);
 
             //get player representing any letter at this point
-            char playerLetter = point_getChar(globalPoint);
+            char playerLetter = point_getPlayer(globalPoint);
 
             // If current point is the player's own position, always display '@'
-            if (point_getVisability) {
+            if (player->x == i && player->y == j) {
                 mapSymbol = '@';
+            }
+
+            //if ANOTHER player is at that point, display their letter
+            else if (playerLetter != ' ' && playerLetter != '@') {
+              mapSymbol = playerLetter;
             }
 
             //otherwise, if that point is only visible to the player
@@ -945,7 +950,7 @@ static void moveByKey(char key, int* dx, int* dy, bool *keepMoving) {
     case 'K': *dx = -1; *dy=0;   *keepMoving = true; return;  //move up, if possible
     case 'Y': *dx = -1; *dy= -1; *keepMoving = true; return;  //move diagonally up and left, if possible
     case 'U': *dx = -1; *dy = 1;  *keepMoving = true; return;  //move diagonally up and right, if possible
-    case 'B': *dx = 1; *dy = -1;  *keepMoving = true; return;   //move diagonally down and left, if possible
+    case 'B': *dx = 1; *dy = 1;  *keepMoving = true; return;   //move diagonally down and left, if possible
     case 'N': *dx = 1; *dy = 1;  *keepMoving = true; return;   //move diagonally down and right, if possible
 
     //if invalid key
