@@ -675,12 +675,12 @@ char* displayGame(game_t* game, addr_t fromClient) {
         if (playerLetter == ' ') {
 
           //if gold is not visible to player
-          if (!localPoint->visibleGold) {
-            mapSymbol = pointValToChar(localPoint->playerLetter);
+          if (localPoint->visibleGold) {
+            mapSymbol = pointValToChar(point_getVal(localPoint));
           }
 
           //else if gold is visible to the player
-          else if (point_getNuggets(globalPoint)) {
+          else if (point_getNuggets(globalPoint) > 0) {
             mapSymbol = '*';
           }
 
@@ -714,7 +714,7 @@ char* displayGame(game_t* game, addr_t fromClient) {
           }
           //else display the terrain
           else {
-            pointValToChar(point_getVal(globalPoint));
+            mapSymbol = pointValToChar(point_getVal(globalPoint));
           }
         }
 
@@ -725,12 +725,15 @@ char* displayGame(game_t* game, addr_t fromClient) {
     }
 
       //concatenate symbol to the display/output string
-      strncat(display, &mapSymbol, 1);
+      char tmp[2] = { mapSymbol, '\0' };
+      strcat(display, tmp);
+
       }
 
     //add new line to end of each row
     strcat(display, "\n"); 
   }
+  printf("RAW DISPLAY:\n%s\n", display);
   return display;
 }
 
@@ -867,7 +870,7 @@ static void processKeystroke(game_t* game, player_t* player, const char* keyMess
   int dy = 0;
 
   //if uppercase key pressed, we want to keep moving until we can't
-  bool* keepMoving = false;
+  bool keepMoving = false;
 
   char keystroke = keyMessage[0];
   log_v("Processing player input...\n");
@@ -883,7 +886,7 @@ static void processKeystroke(game_t* game, player_t* player, const char* keyMess
   }
 
   //handle keystrokes
-  moveByKey(keystroke, &dx, &dy, keepMoving);
+  moveByKey(keystroke, &dx, &dy, &keepMoving);
   int newX = currX + dx;
   int newY = currY + dy;
 
@@ -910,7 +913,7 @@ static void processKeystroke(game_t* game, player_t* player, const char* keyMess
  * Processes LOWERCASE keys (move once)
  * Process UPPERCASE keys (move continuously until can't on map)
  */
-static void moveByKey(char key, int* dx, int* dy, bool* keepMoving) {
+static void moveByKey(char key, int* dx, int* dy, bool *keepMoving) {
   *dx = 0;
   *dy = 0;
   *keepMoving = false;
