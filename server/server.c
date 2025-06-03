@@ -721,7 +721,6 @@ char *displayGame(game_t *game, addr_t fromClient)
         if (playerLetter == ' ')
         {
 
-<<<<<<< HEAD
           // if gold is not visible to player
           if (!localPoint->visibleGold)
           {
@@ -731,15 +730,6 @@ char *displayGame(game_t *game, addr_t fromClient)
           // else if gold is visible to the player
           else if (point_getNuggets(globalPoint))
           {
-=======
-          //if gold is not visible to player
-          if (localPoint->visibleGold) {
-            mapSymbol = pointValToChar(point_getVal(localPoint));
-          }
-
-          //else if gold is visible to the player
-          else if (point_getNuggets(globalPoint) > 0) {
->>>>>>> 0286f37ae968145a7ee3b8eab3582aec8ebb5f8e
             mapSymbol = '*';
           }
 
@@ -777,16 +767,10 @@ char *displayGame(game_t *game, addr_t fromClient)
           {
             mapSymbol = '*';
           }
-<<<<<<< HEAD
           // else display the terrain
           else
           {
             pointValToChar(point_getVal(globalPoint));
-=======
-          //else display the terrain
-          else {
-            mapSymbol = pointValToChar(point_getVal(globalPoint));
->>>>>>> 0286f37ae968145a7ee3b8eab3582aec8ebb5f8e
           }
         }
 
@@ -801,19 +785,8 @@ char *displayGame(game_t *game, addr_t fromClient)
       strncat(display, &mapSymbol, 1);
     }
 
-<<<<<<< HEAD
     // add new line to end of each row
     strcat(display, "\n");
-=======
-      //concatenate symbol to the display/output string
-      char tmp[2] = { mapSymbol, '\0' };
-      strcat(display, tmp);
-
-      }
-
-    //add new line to end of each row
-    strcat(display, "\n"); 
->>>>>>> 0286f37ae968145a7ee3b8eab3582aec8ebb5f8e
   }
   printf("RAW DISPLAY:\n%s\n", display);
   return display;
@@ -962,13 +935,8 @@ static void processKeystroke(game_t *game, player_t *player, const char *keyMess
   int dx = 0;
   int dy = 0;
 
-<<<<<<< HEAD
   // if uppercase key pressed, we want to keep moving until we can't
   bool *keepMoving = false;
-=======
-  //if uppercase key pressed, we want to keep moving until we can't
-  bool keepMoving = false;
->>>>>>> 0286f37ae968145a7ee3b8eab3582aec8ebb5f8e
 
   char keystroke = keyMessage[0];
   log_v("Processing player input...\n");
@@ -984,13 +952,8 @@ static void processKeystroke(game_t *game, player_t *player, const char *keyMess
     return;
   }
 
-<<<<<<< HEAD
   // handle keystrokes
   moveByKey(keystroke, &dx, &dy, keepMoving);
-=======
-  //handle keystrokes
-  moveByKey(keystroke, &dx, &dy, &keepMoving);
->>>>>>> 0286f37ae968145a7ee3b8eab3582aec8ebb5f8e
   int newX = currX + dx;
   int newY = currY + dy;
 
@@ -1019,12 +982,8 @@ static void processKeystroke(game_t *game, player_t *player, const char *keyMess
  * Processes LOWERCASE keys (move once)
  * Process UPPERCASE keys (move continuously until can't on map)
  */
-<<<<<<< HEAD
 static void moveByKey(char key, int *dx, int *dy, bool *keepMoving)
 {
-=======
-static void moveByKey(char key, int* dx, int* dy, bool *keepMoving) {
->>>>>>> 0286f37ae968145a7ee3b8eab3582aec8ebb5f8e
   *dx = 0;
   *dy = 0;
   *keepMoving = false;
