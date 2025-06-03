@@ -178,13 +178,13 @@ static bool handleInput(void* arg){
     char* msg;
 
     if(character == EOF){
-        messageServer(*address, "Q");
+        messageServer(*address, "KEY Q");
         return true;
     }
 
     if(isSpectator){
         if(character == 'Q' || character=='q'){ //spectator only allowed to type 'Q'
-            msg = "Q";
+            msg = "KEY Q";
             messageServer(*address, msg);
             return true;
         } else{
@@ -193,14 +193,14 @@ static bool handleInput(void* arg){
         }
     }
 
-    msg = malloc(6); //"KEY" + char + '\0'
+    msg = malloc(20); //"KEY" + char + '\0'
     if(msg == NULL){
         log_v("Error: Malloc failed\n");
         return false;
     }
     
-    sprintf(msg, "%c", character);
-    log_s("Sent message: %s\n", msg);
+    sprintf(msg, "KEY %c", character);
+    log_s("Sent message: KEY %s\n", msg);
     messageServer(*address, msg);
 
     bool shouldQuit = (character=='Q' || character=='q'); 
@@ -367,7 +367,7 @@ static void parseGold(const char* input){
 
     collected += curr; 
     if (collected>total){
-        messageServer(*address, "Q");
+        messageServer(*address, "KEY Q");
     } else if (curr > 0) {
         sprintf(displayMessage, "Player %c has %d nuggets (%d unclaimed).", playerChar, collected, remaining);
         addExtra = true;
