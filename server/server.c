@@ -701,91 +701,100 @@ char *displayGame(game_t *game, addr_t fromClient)
     for (int j = 0; j < numCols; j++)
     {
 
-      point_t *globalPoint = grid_get(fullGrid, i, j);
-      char mapSymbol = ' ';
+      point_t *globalPoint = grid_get(fullGrid, i, j); // get global point on fullMap
+      char mapSymbol = ' ';                            // mapSymbol (char) on the map
 
-      // if client is a player (not spectator) display local grid
+      // if client is a PLAYER (not a spectator)
       if (!isSpectator)
       {
+        // get player's local view of the point
         point_t *localPoint = grid_get(localGrid, i, j);
-        char playerLetter = ' ';
 
-        // check if point is within player's field of vision
-        if (point_getVisibility(localPoint))
-        {
-          // get letter of any player standing at this point in the global grid
-          playerLetter = point_getChar(globalPoint);
-        }
+        // get player representing any letter at this point
+        char playerLetter = point_getPlayer(globalPoint);
 
-        // if no player is standing at that point
-        if (playerLetter == ' ')
-        {
-
-          // if gold is not visible to player
-          if (!localPoint->visibleGold)
-          {
-            mapSymbol = pointValToChar(localPoint->playerLetter);
-          }
-
-          // else if gold is visible to the player
-          else if (point_getNuggets(globalPoint))
-          {
-            mapSymbol = '*';
-          }
-
-          // otherwise show terrain of map based on point's local value
-          else
-          {
-            mapSymbol = pointValToChar(point_getVal(localPoint));
-          }
-        }
-
-        // if client is standing at that point
-        else if (player->letter == playerLetter)
+        // If current point is the player's own position, always display '@'
+        if (player->x == i && player->y == j)
         {
           mapSymbol = '@';
         }
 
-        // else its another player standing there
-        else
+        // if ANOTHER player is at that point, display their letter
+        else if (playerLetter != ' ' && playerLetter != '@')
         {
           mapSymbol = playerLetter;
         }
+
+        // otherwise, if that point is only visible to the player
+        else if (point_getVisibility(localPoint))
+        {
+          // if no player is at that point
+          if (playerLetter == ' ')
+          {
+            // if gold is not visible
+            if (!localPoint->visibleGold)
+            {
+              // show the terrain at that point
+              mapSymbol = pointValToChar(point_getVal(localPoint));
+            }
+
+            // else if gold exists at that point is and visible
+            else if (point_getNuggets(globalPoint) > 0)
+            {
+              mapSymbol = '*';
+            }
+            // else if no gold, display the terrain
+            else
+            {
+              mapSymbol = pointValToChar(point_getVal(localPoint));
+            }
+          }
+          // else another player is also at that point
+          else
+          {
+            mapSymbol = playerLetter;
+          }
+        }
+
+        // else point is not visible to player, display blank space
+        else
+        {
+          mapSymbol = ' ';
+        }
       }
 
-      // if client is a spectator
+      // else client is a SPECTATOR
       else
       {
-        // get letter of player at that point if any
-        char pLetter = point_getPlayer(globalPoint);
+        char pLetter = point_getPlayer(globalPoint); // getting any player at this point
 
-        // if no player is at that point
+        // if no player at this location
         if (pLetter == ' ')
         {
-          // if there is gold, show it
+          // if gold is present, display '*'
           if (point_getNuggets(globalPoint) > 0)
           {
             mapSymbol = '*';
           }
-          // else display the terrain
+          // else no gold is present, display terrain
           else
           {
-            pointValToChar(point_getVal(globalPoint));
+            mapSymbol = pointValToChar(point_getVal(globalPoint));
           }
         }
 
-        // if a player IS at that point, show their playerLetter
+        // else a player exists at that point, display their playerLetter
         else
         {
           mapSymbol = pLetter;
         }
       }
-
-      // concatenate symbol to the display/output string
-      strncat(display, &mapSymbol, 1);
+      // concatenate to the display string
+      char tmp[2] = {mapSymbol, '\0'};
+      strcat(display, tmp);
     }
 
-    // add new line to end of each row
+    // add newline after each row
     strcat(display, "\n");
   }
   printf("RAW DISPLAY:\n%s\n", display);
@@ -818,8 +827,8 @@ static char pointValToChar(int pointVal)
 
 /*
  * Moves a player on the map, handles 3 cases:
- * 1st case: if point is empty, move that player
- * 2nd case: if another player is occupying that point, swap their letters and positions
+ * 1st case: if another player is occupying that point, swap their letters and positions
+ * 2nd case: if point is empty, move that player
  * 3rd case: invalid move/cannot move to that point on map
  */
 static bool movePlayer(game_t *game, player_t *player, int currX, int currY, int newX, int newY)
@@ -838,7 +847,37 @@ static bool movePlayer(game_t *game, player_t *player, int currX, int currY, int
 
   int pointVal = point_getVal(newLocalPoint);
 
-  // case 1: if point is empty (valid room/passage), move the player
+  char targetPlayerLetter = point_getPlayer(newGlobalPoint);
+
+  // case 1: if another player is on the destination point (swap the players)
+  if (targetPlayerLetter != ' ')
+  {
+    player_t *otherPlayer = findPlayerByLetter(game, targetPlayerLetter);
+
+    // if there exists that other player at that point
+    if (otherPlayer != NULL)
+    {
+
+      // update the OTHER player's global position
+      otherPlayer->x = currX;
+      otherPlayer->y = currY;
+      point_setPlayer(oldGlobalPoint, targetPlayerLetter);
+
+      // update the CURRENT player's position
+      player->x = newX;
+      player->y = newY;
+      point_setPlayer(newGlobalPoint, player->letter);
+
+      // update LOCAL map: new position gets player, old one is cleared
+      point_setPlayer(newLocalPoint, player->letter);
+      point_setPlayer(oldLocalPoint, ' ');
+
+      mapUpdate(localGrid, newX, newY);
+      return true;
+    }
+  }
+
+  // case 2: if point is empty (valid room/passage), move the player
   if (pointVal == 1 || pointVal == 3)
   {
     player->x = newX;
@@ -871,36 +910,6 @@ static bool movePlayer(game_t *game, player_t *player, int currX, int currY, int
 
     mapUpdate(localGrid, newX, newY);
     return true;
-  }
-
-  char targetPlayerLetter = point_getPlayer(newGlobalPoint);
-
-  // case 2: if another player is on the destination point (swap the players)
-  if (targetPlayerLetter != ' ')
-  {
-    player_t *otherPlayer = findPlayerByLetter(game, targetPlayerLetter);
-
-    // if there exists that other player at that point
-    if (otherPlayer != NULL)
-    {
-
-      // update the OTHER player's global position
-      otherPlayer->x = currX;
-      otherPlayer->y = currY;
-      point_setPlayer(oldGlobalPoint, targetPlayerLetter);
-
-      // update the CURRENT player's position
-      player->x = newX;
-      player->y = newY;
-      point_setPlayer(newGlobalPoint, player->letter);
-
-      // update LOCAL map: new position gets player, old one is cleared
-      point_setPlayer(newLocalPoint, player->letter);
-      point_setPlayer(oldLocalPoint, ' ');
-
-      mapUpdate(localGrid, newX, newY);
-      return true;
-    }
   }
 
   // case 3: invalid move
@@ -961,6 +970,9 @@ static void processKeystroke(game_t *game, player_t *player, const char *keyMess
   if (!keepMoving)
   {
     movePlayer(game, player, currX, currY, newX, newY);
+
+    printf("currX: %d, currY: %d", currX, currY);
+    printf("\nnewX: %d, newY: %d", newX, newY);
   }
 
   // else UPPERCASE key (keepMoving is true), keep moving player until they can't move anymore
@@ -988,61 +1000,64 @@ static void moveByKey(char key, int *dx, int *dy, bool *keepMoving)
   *dy = 0;
   *keepMoving = false;
 
+  // x is the row (so it's actually y in terms of xy coordinates)
+  // y is the column (so it's actually x in terms of xy coordinates)
+
   switch (key)
   {
   // lower case keystrokes
   case 'h':
-    *dx = -1;
-    *dy = 0;
-    return; // move left, if possible
-  case 'l':
-    *dx = 1;
-    *dy = 0;
-    return; // move right, if possible
-  case 'j':
     *dx = 0;
     *dy = -1;
-    return; // move down, if possible
-  case 'k':
+    return; // move left, if possible
+  case 'l':
     *dx = 0;
     *dy = 1;
+    return; // move right, if possible
+  case 'j':
+    *dx = 1;
+    *dy = 0;
+    return; // move down, if possible
+  case 'k':
+    *dx = -1;
+    *dy = 0;
     return; // move up, if possible
   case 'y':
     *dx = -1;
     *dy = -1;
     return; // move diagonally up and left, if possible
   case 'u':
-    *dx = 1;
+    *dx = -1;
     *dy = 1;
     return; // move diagonally up and right, if possible
   case 'b':
-    *dx = -1;
+    *dx = 1;
     *dy = -1;
     return; // move diagonally down and left, if possible
   case 'n':
     *dx = 1;
-    *dy = -1;
+    *dy = 1;
     return; // move diagonally down and right, if possible
 
   // upper case keystrokes
   case 'H':
-    *dx = -1;
-    *dy = 0;
-    *keepMoving = true;
-    return; // move left, if possible
-  case 'L':
-    *dx = 1;
-    *dy = 0;
-    *keepMoving = true;
-    return; // move right, if possible
-  case 'J':
     *dx = 0;
     *dy = -1;
     *keepMoving = true;
-    return; // move down, if possible
-  case 'K':
+    return; // move left, if possible
+  case 'L':
     *dx = 0;
     *dy = 1;
+    *keepMoving = true;
+    return; // move right, if possible
+  case 'J':
+    *dx = 1;
+    *dy = 0;
+    *keepMoving = true;
+    return; // move down, if possible
+  case 'K':
+    *dx = -1;
+    *dy = 0;
     *keepMoving = true;
     return; // move up, if possible
   case 'Y':
@@ -1051,18 +1066,18 @@ static void moveByKey(char key, int *dx, int *dy, bool *keepMoving)
     *keepMoving = true;
     return; // move diagonally up and left, if possible
   case 'U':
-    *dx = 1;
+    *dx = -1;
     *dy = 1;
     *keepMoving = true;
     return; // move diagonally up and right, if possible
   case 'B':
-    *dx = -1;
-    *dy = -1;
+    *dx = 1;
+    *dy = 1;
     *keepMoving = true;
     return; // move diagonally down and left, if possible
   case 'N':
     *dx = 1;
-    *dy = -1;
+    *dy = 1;
     *keepMoving = true;
     return; // move diagonally down and right, if possible
 
