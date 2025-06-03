@@ -743,7 +743,7 @@ char* displayGame(game_t* game, addr_t fromClient) {
     // add newline after each row
     strcat(display, "\n");
 }
-  //printf("RAW DISPLAY:\n%s\n", display);
+  printf("RAW DISPLAY:\n%s\n", display);
   return display;
 }
 
