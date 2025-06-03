@@ -55,29 +55,50 @@ grid_t *grid_new()
 /**************** grid_insert ****************/
 /*See grid.h for more info*/
 void grid_insert(grid_t *grid, point_t *point, int row, int col)
-{
-    grid->map[row][col] = point;
+{   
+    if (grid != NULL && point!= NULL && row>0 && col>0) {
+        grid->map[row][col] = point;
+    }
 }
 
 /**************** grid_get ****************/
 /*See grid.h for more info*/
 point_t *grid_get(grid_t *grid, int row, int col)
 {
-    return grid->map[row][col];
+    if (grid != NULL) {
+
+        printf("row: %d", row);
+        printf("\ncol: %d", col);
+        return grid->map[row][col];
+
+
+        
+    }
+
+
+    return NULL;
+    
 }
 
 /**************** grid_getnumRows ****************/
 /*See grid.h for more info*/
 int grid_getNumRows(grid_t *grid)
 {
-    return grid->numRows;
+    if (grid != NULL) {
+        return grid->numRows;
+    }
+
+    return 0;
 }
 
 /**************** grid_getnumCols ****************/
 /*See grid.h for more info*/
 int grid_getNumCols(grid_t *grid)
-{
-    return grid->numCols;
+{   
+    if (grid != NULL) {
+        return grid->numCols;
+    }
+    return 0;
 }
 
 /**************** grid_setnumRows ****************/
@@ -228,7 +249,11 @@ void point_setNuggets(point_t *point, int count)
 /**************** initializeMap ****************/
 /*Parse the given map.txt file to build the grid */
 grid_t *initializeMap(FILE *fp)
-{
+{   
+    //null check
+    if (fp == NULL) {
+        return NULL;
+    }
 
     grid_t *grid = grid_new();
 
@@ -299,6 +324,11 @@ grid_t *initializeMap(FILE *fp)
 /*Distribute gold randomly across the map*/
 void randomizeGold(grid_t *grid, int minPiles, int maxPiles, int totalGold)
 {
+
+    //null check
+    if (grid == NULL) {
+        return;
+    }
 
     srand(time(NULL)); // seed random number generator
 
