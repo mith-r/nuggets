@@ -889,7 +889,7 @@ static void processKeystroke(game_t* game, player_t* player, const char* keyMess
   if ((keystroke == 'Q')|| (keystroke == 'q')) {
     log_v("Player requested to quit. \n");
 
-    message_send(player->port, "You have QUIT");
+    message_send(player->port, "QUIT player");
     player_delete(player, game);
     game->quitCount++;
     return;
