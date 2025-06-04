@@ -12,7 +12,7 @@ When all gold nuggets are collected, the game ends and a summary is printed.
 
 **Grid:** Provides a structured representation of the game's map, gold locations, and visibility for each player or spectator.
 
-Assumptions: Changed message_loop function to support our display.
+Assumptions: Changed certain message functions to log_d to support our display.
 
 
 
