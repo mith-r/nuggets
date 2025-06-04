@@ -46,16 +46,6 @@ typedef struct game {
 
 
 
-/*
- * Grid struct
- */
-typedef struct grid{
-  int numRows;
-  int numCols;
-  point_t** grid[250][250];  //size of grid
-} grid_t;
-
-
 
 //function prototypes
 game_t* game_new(char* mapFile);
@@ -237,7 +227,7 @@ game_t* game_new(char* mapFile) {
     return NULL;
   }
 
-  player_t** player_array = malloc(sizeof(player_t)*MaxPlayers);
+  player_t** player_array = malloc(sizeof(player_t*)*MaxPlayers);
   game->player_array = player_array;
 
   //instantitate array of players, all null initially
@@ -352,10 +342,10 @@ bool processMessage(void* arg, addr_t clientAddress, const char* message) {
       if (player != NULL) {
         processKeystroke(game, player, key);  //process the player's keystrokes/movement
 
-        player = findPlayerByAddress(game, clientAddress);
-        if (player == NULL) {
-          return false;
-        }
+       // player = findPlayerByAddress(game, clientAddress);
+        //if (player == NULL) {
+          //return false;
+        //}
 
         sendGoldMessage(player->justCollected, player->purse, game->goldRemaining, clientAddress);
         sendDisplayMessage(game, clientAddress);
@@ -414,7 +404,7 @@ static void sendGridMessage(game_t* game, addr_t to) {
  * Helper function for processMessage that sends goldMessage
  */
 static void sendGoldMessage(int goldCollected, int purse, int goldRemaining, addr_t to) {
-  char buffer[30];
+  char buffer[64];
   snprintf(buffer, sizeof(buffer), "GOLD %d %d %d", goldCollected, purse, goldRemaining);
   message_send(to, buffer);
 }
@@ -836,7 +826,6 @@ static bool movePlayer(game_t* game, player_t* player, int currX, int currY, int
       game->totalGoldCollected += numGold;
       game->goldRemaining = GoldTotal - game->totalGoldCollected;
       
-      game->totalGoldCollected += numGold;
       point_setNuggets(newGlobalPoint, 0);
     }
 
@@ -1004,21 +993,21 @@ static void game_spectate(game_t* game, addr_t clientAddress) {
     log_e("ERROR: memory could not be allocated for gold_message in game_spectate");
   }
 
-  snprintf(gold_message, 16, "GOLD 0 0 %d", goldLeft);
+  snprintf(gold_message, 32, "GOLD 0 0 %d", goldLeft);
   message_send(clientAddress, gold_message);
 
 
   // Sending the GRID message
   int numRows = grid_getNumRows(game->fullMap);
   int numCols = grid_getNumCols(game->fullMap);
-  char* grid_message = calloc(1, 14);
+  char* grid_message = calloc(1, 32);
   //check if memory was correctly allocated
   if (grid_message == NULL) {
     log_e("ERROR: memory could not be allocated for grid_message in game_spectate");
   }
 
   //concatenate numRows and numCols to grid_message
-  snprintf(grid_message, 16, "GRID %d %d", numRows, numCols);
+  snprintf(grid_message, 32, "GRID %d %d", numRows, numCols);
 
 
   //Sending DISPLAY message
