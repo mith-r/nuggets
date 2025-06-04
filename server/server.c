@@ -46,16 +46,6 @@ typedef struct game {
 
 
 
-/*
- * Grid struct
- */
-typedef struct grid{
-  int numRows;
-  int numCols;
-  point_t** grid[250][250];  //size of grid
-} grid_t;
-
-
 
 //function prototypes
 game_t* game_new(char* mapFile);
@@ -69,7 +59,7 @@ player_t* findPlayerByAddress(game_t* game, addr_t addr);
 player_t* findPlayerByLetter(game_t* game, char playerLetter);
 static char pointValToChar(int pointVal);
 char* displayGame(game_t* game, addr_t fromClient);
-static void processKeystroke(game_t* game, player_t* player, const char* keyMessage);
+static bool processKeystroke(game_t* game, player_t* player, const char* keyMessage);
 static void moveByKey(char key, int* dx, int* dy, bool* keepMoving);
 static void sendGridMessage(game_t* game, addr_t to);
 static void sendGoldMessage(int goldCollected, int purse, int goldRemaining, addr_t to);
@@ -237,7 +227,7 @@ game_t* game_new(char* mapFile) {
     return NULL;
   }
 
-  player_t** player_array = malloc(sizeof(player_t)*MaxPlayers);
+  player_t** player_array = malloc(sizeof(player_t*)*MaxPlayers);
   game->player_array = player_array;
 
   //instantitate array of players, all null initially
@@ -321,6 +311,7 @@ bool processMessage(void* arg, addr_t clientAddress, const char* message) {
       //send GRID, GOLD, DISPLAY messages
       sendGridMessage(game, clientAddress);
       sendGoldMessage(0, 0, game->goldRemaining, clientAddress);
+      player->justCollected = 0;
       sendDisplayMessage(game, clientAddress);
     }
   }
@@ -350,15 +341,42 @@ bool processMessage(void* arg, addr_t clientAddress, const char* message) {
       player_t* player = findPlayerByAddress(game, clientAddress);
 
       if (player != NULL) {
-        processKeystroke(game, player, key);  //process the player's keystrokes/movement
-        sendGoldMessage(player->justCollected, player->purse, game->goldRemaining, clientAddress);
-        sendDisplayMessage(game, clientAddress);
 
-        //update the display for current spectator if there is any
+        /* --------- BEGIN NEW CODE --------- */
+        bool alive = processKeystroke(game, player, key);
+
+        /* always refresh the spectator’s view */
         if (!message_eqAddr(game->spectator, message_noAddr())) {
           game_spectate(game, game->spectator);
         }
-      }
+
+        /* if the player quit, stop processing for this client */
+        if (!alive) {
+          return false;          /* keep server loop running */
+        }
+
+        /* player is still here – send their updates */
+        sendGoldMessage(player->justCollected,
+                player->purse,
+                game->goldRemaining,
+                clientAddress);
+        sendDisplayMessage(game, clientAddress);
+      //   processKeystroke(game, player, key);  //process the player's keystrokes/movement
+
+      //  // player = findPlayerByAddress(game, clientAddress);
+      //   //if (player == NULL) {
+      //     //return false;
+      //   //}
+
+      //   sendGoldMessage(player->justCollected, player->purse, game->goldRemaining, clientAddress);
+      //   sendDisplayMessage(game, clientAddress);
+
+      //   //update the display for current spectator if there is any
+      //   if (!message_eqAddr(game->spectator, message_noAddr())) {
+      //     game_spectate(game, game->spectator);
+
+        
+        }
     }
   }
 
@@ -408,7 +426,7 @@ static void sendGridMessage(game_t* game, addr_t to) {
  * Helper function for processMessage that sends goldMessage
  */
 static void sendGoldMessage(int goldCollected, int purse, int goldRemaining, addr_t to) {
-  char buffer[30];
+  char buffer[64];
   snprintf(buffer, sizeof(buffer), "GOLD %d %d %d", goldCollected, purse, goldRemaining);
   message_send(to, buffer);
 }
@@ -579,10 +597,14 @@ bool assignRandomSpot(player_t* player, game_t* game) {
 //finds player by address
 player_t* findPlayerByAddress(game_t* game, addr_t addr) {
 
+  if (game == NULL) {
+    return NULL;
+  }
+
   //loop through player array and find that player based on their address
   for (int i =0; i<game->totalPlayers; i++) {
     //if the player address matches what is stored for the player in game
-    if(message_eqAddr(addr, game->player_array[i]->port)) {
+    if(game->player_array[i] && message_eqAddr(addr, game->player_array[i]->port)) {
         return game->player_array[i];
     } 
   }
@@ -826,7 +848,6 @@ static bool movePlayer(game_t* game, player_t* player, int currX, int currY, int
       game->totalGoldCollected += numGold;
       game->goldRemaining = GoldTotal - game->totalGoldCollected;
       
-      game->totalGoldCollected += numGold;
       point_setNuggets(newGlobalPoint, 0);
     }
 
@@ -848,55 +869,107 @@ static bool movePlayer(game_t* game, player_t* player, int currX, int currY, int
 /*
  * Handles keystrokes client presses and updates the player's position on the map
  */
-static void processKeystroke(game_t* game, player_t* player, const char* keyMessage) {
+// static bool processKeystroke(game_t* game, player_t* player, const char* keyMessage) {
 
-  //null check
-  if (player == NULL) {
-    log_v("Player passed into processKeystroke is NULL");
-    return;
-  }
+//   //null check
+//   if (player == NULL) {
+//     log_v("Player passed into processKeystroke is NULL");
+//     return;
+//   }
 
-  if (keyMessage == NULL) {
-    log_v("keyMessage passed into processKeystroke is NULL");
-    return;
-  }
+//   if (keyMessage == NULL) {
+//     log_v("keyMessage passed into processKeystroke is NULL");
+//     return;
+//   }
 
-  //current x, y of player
-  int currX = player->x;
-  int currY = player->y;
+//   //current x, y of player
+//   int currX = player->x;
+//   int currY = player->y;
 
-  //dx, dy -> distance player will move by
-  int dx = 0;
-  int dy = 0;
+//   //dx, dy -> distance player will move by
+//   int dx = 0;
+//   int dy = 0;
 
-  //if uppercase key pressed, we want to keep moving until we can't
-  bool keepMoving = false;
+//   //if uppercase key pressed, we want to keep moving until we can't
+//   bool keepMoving = false;
 
-  char keystroke = keyMessage[0];
-  log_v("Processing player input...\n");
+//   char keystroke = keyMessage[0];
+//   log_v("Processing player input...\n");
 
-  //handle QUIT (q)
-  if ((keystroke == 'Q')|| (keystroke == 'q')) {
-    log_v("Player requested to quit. \n");
+//   //handle QUIT (q)
+//   if ((keystroke == 'Q')|| (keystroke == 'q')) {
+//     log_v("Player requested to quit. \n");
 
-    message_send(player->port, "You have QUIT");
-    player_delete(player, game);
-    game->quitCount++;
-    return;
-  }
+//     message_send(player->port, "QUIT player");
+//     player_delete(player, game);
+//     game->quitCount++;
+//     return;
+//   }
 
-  //handle keystrokes
-  moveByKey(keystroke, &dx, &dy, &keepMoving);
-  int newX = currX + dx;
-  int newY = currY + dy;
+//   //handle keystrokes
+//   moveByKey(keystroke, &dx, &dy, &keepMoving);
+//   int newX = currX + dx;
+//   int newY = currY + dy;
+
+//   //if lowercase key (keepingMoving is false)
+//   if (!keepMoving) {
+//     movePlayer(game, player, currX, currY, newX, newY);
+
+
+//     printf("currX: %d, currY: %d", currX, currY);
+//     printf("\nnewX: %d, newY: %d", newX, newY);
+
+//   }
+
+//   //else UPPERCASE key (keepMoving is true), keep moving player until they can't move anymore
+//   else { 
+//     while(movePlayer(game, player, currX, currY, newX, newY)) {
+//       //updating positions
+//       currX = newX;
+//       currY = newY;
+//       newX += dx;
+//       newY += dy;
+//     }
+//   }
+// }
+
+/* returns true if the player is still in the game, false if they quit */
+static bool processKeystroke(game_t* game,
+  player_t* player,
+  const char* keyMessage)
+{
+if (player == NULL || keyMessage == NULL) {
+return false;
+}
+
+int currX = player->x;
+int currY = player->y;
+int dx = 0, dy = 0;
+bool keepMoving = false;
+char key = keyMessage[0];
+
+/* handle quit */
+if (key == 'Q' || key == 'q') {
+message_send(player->port, "QUIT player");
+player_delete(player, game);
+game->quitCount++;
+return false;               /* player no longer exists */
+}
+
+/* set dx, dy and keepMoving */
+moveByKey(key, &dx, &dy, &keepMoving);
+
+/* perform the move(s) */
+int newX = currX + dx;
+int newY = currY + dy;
 
   //if lowercase key (keepingMoving is false)
   if (!keepMoving) {
     movePlayer(game, player, currX, currY, newX, newY);
 
 
-    // printf("currX: %d, currY: %d", currX, currY);
-    // printf("\nnewX: %d, newY: %d", newX, newY);
+    printf("currX: %d, currY: %d", currX, currY);
+    printf("\nnewX: %d, newY: %d", newX, newY);
 
   }
 
@@ -994,21 +1067,21 @@ static void game_spectate(game_t* game, addr_t clientAddress) {
     log_e("ERROR: memory could not be allocated for gold_message in game_spectate");
   }
 
-  snprintf(gold_message, 16, "GOLD 0 0 %d", goldLeft);
+  snprintf(gold_message, 32, "GOLD 0 0 %d", goldLeft);
   message_send(clientAddress, gold_message);
 
 
   // Sending the GRID message
   int numRows = grid_getNumRows(game->fullMap);
   int numCols = grid_getNumCols(game->fullMap);
-  char* grid_message = calloc(1, 14);
+  char* grid_message = calloc(1, 32);
   //check if memory was correctly allocated
   if (grid_message == NULL) {
     log_e("ERROR: memory could not be allocated for grid_message in game_spectate");
   }
 
   //concatenate numRows and numCols to grid_message
-  snprintf(grid_message, 16, "GRID %d %d", numRows, numCols);
+  snprintf(grid_message, 32, "GRID %d %d", numRows, numCols);
 
 
   //Sending DISPLAY message

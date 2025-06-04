@@ -30,7 +30,7 @@ static void parseMap(const char* input);
 static void cleanGame(void);
 ```
 #### Assumptions
-The client assumes the game grid provided by the server does not exceed 999 columns and 99 rows. 
+The client assumes the game grid provided by the server does not exceed 999 columns and 999 rows. 
 
 #### Implementation
 - Argument Validation: Command-line arguments are validated by the `validateArgs` function, ensuring a proper hostname, port number, and optional player name are provided.

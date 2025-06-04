@@ -31,7 +31,7 @@ typedef struct grid
 {
     int numRows;            // number of rows
     int numCols;            // number of columns
-    point_t *map[100][100]; // map as a 2D array
+    point_t *grid[250][250]; // map as a 2D array
 } grid_t;
 
 /**************** CORE GRID FUNCTIONS ****************/
@@ -57,7 +57,7 @@ grid_t *grid_new()
 void grid_insert(grid_t *grid, point_t *point, int row, int col)
 {   
     if (grid != NULL && point!= NULL && row>=0 && col>=0) {
-        grid->map[row][col] = point;
+        grid->grid[row][col] = point;
     }
 }
 
@@ -66,7 +66,7 @@ void grid_insert(grid_t *grid, point_t *point, int row, int col)
 point_t *grid_get(grid_t *grid, int row, int col)
 {
     if (grid != NULL) {
-        return grid->map[row][col];
+        return grid->grid[row][col];
     }
 
 

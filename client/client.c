@@ -45,6 +45,7 @@ char* serverPort;
 char* map;
 int nrows = 0;
 int ncols = 0;
+static bool screenReady = false;
 
 /************ gold tracking variables ************/
 int collected = 0;
@@ -103,6 +104,7 @@ static void setUpDisplay(int nrows, int ncols){
     attron(COLOR_PAIR(1));
 
     refresh(); //apply changes
+    screenReady = true;
 }
 
 /************ exitGame ************/
@@ -174,16 +176,25 @@ void messageServer(addr_t addr, char* message){
 /************ handleInput ************/
 /* Handles user key input and sends appropriate message to server */
 static bool handleInput(void* arg){
-    char character = getch();
+    
+    if(!screenReady){
+        return false;
+    }
+
+    int ch = getch();
+    if(ch == ERR){
+        return false;
+    }
+    char character = (char)ch;
     char* msg;
 
-    if(character == EOF){
-        messageServer(*address, "KEY Q");
-        return true;
+    const char* valid = "hjklyubnHJKLYUBNqQ";
+    if (strchr(valid, ch) == NULL) {
+        return false;                   
     }
 
     if(isSpectator){
-        if(character == 'Q'){ //spectator only allowed to type 'Q'
+        if(character == 'Q' || character=='q'){ //spectator only allowed to type 'Q'
             msg = "KEY Q";
             messageServer(*address, msg);
             return true;
@@ -193,7 +204,7 @@ static bool handleInput(void* arg){
         }
     }
 
-    msg = malloc(6); //"KEY" + char + '\0'
+    msg = malloc(20); //"KEY" + char + '\0'
     if(msg == NULL){
         log_v("Error: Malloc failed\n");
         return false;
@@ -203,7 +214,7 @@ static bool handleInput(void* arg){
     log_s("Sent message: %s\n", msg);
     messageServer(*address, msg);
 
-    bool shouldQuit = (character=='Q');
+    bool shouldQuit = (character=='Q' || character=='q'); 
     free(msg);
     return shouldQuit; 
 } 
@@ -311,53 +322,100 @@ static void handleResize(int k){
 
 /************ showDisplay ************/
 /* Renders the displayMessage, map, and player cursor to the screen */
-static void showDisplay(void){
+// static void showDisplay(void){
+//     clear();
+//     mvprintw(0, 0, "%s", displayMessage);
+//     int wordlen = strlen(displayMessage);
+
+//     if (addExtra) {
+//         mvprintw(0, wordlen, "%s", addedMessage);
+//         wordlen += strlen(addedMessage); // update total length on the line
+//     }
+
+//     while (wordlen < ncols) {
+//         mvaddch(0, wordlen, ' ');  // place a space at position (0, len)
+//         wordlen++;
+//     }
+
+//     mvprintw(1, 0, "%s", map);
+
+//     if(!isSpectator){
+//         int found = 0;
+//         for (int row = 0; row < nrows; row++) {
+//             for (int col = 0; col < ncols; col++) {
+//                 char ch = mvinch(row, col); // read the character at (row, col)
+//                 if (ch == '@') {
+//                     move(row, col); // move cursor to player's position
+//                     found = 1;
+//                     break; // exit inner loop
+//                 }
+//             }
+//             if (found) {
+//                 break; // exit outer loop
+//             }
+//         }    
+//     } else{
+//         move(0,0);
+//     }
+//     refresh();
+// }
+
+static void showDisplay(void)
+{
     clear();
-    mvprintw(0, 0, "%s", displayMessage);
-    int wordlen = strlen(displayMessage);
 
-    if (addExtra) {
-        mvprintw(0, wordlen, "%s", addedMessage);
-        wordlen += strlen(addedMessage); // update total length on the line
+    /* Ensure we always print valid, NUL-terminated strings */
+    const char *line1 = (displayMessage && displayMessage[0] != '\0')
+                        ? displayMessage : "";
+    const char *extra = (addedMessage   && addedMessage[0] != '\0')
+                        ? addedMessage   : "";
+
+    /* First status line */
+    mvprintw(0, 0, "%s", line1);
+    int wordlen = strlen(line1);
+
+    /* Optional “extra” chunk (GOLD / ERROR text) */
+    if (addExtra && extra[0] != '\0') {
+        mvprintw(0, wordlen, "%s", extra);
+        wordlen += strlen(extra);
     }
 
-    while (wordlen < ncols) {
-        mvaddch(0, wordlen, ' ');  // place a space at position (0, len)
-        wordlen++;
+    /* Pad the rest of the first row so old text is cleared */
+    for (int col = wordlen; col < ncols; col++) {
+        mvaddch(0, col, ' ');
     }
 
-    mvprintw(1, 0, "%s", map);
+    /* Game map (may be empty before first DISPLAY) */
+    mvprintw(1, 0, "%s", (map && map[0] != '\0') ? map : "");
 
-    if(!isSpectator){
-        int found = 0;
-        for (int row = 0; row <= nrows; row++) {
-            for (int col = 0; col <= ncols; col++) {
-                char ch = mvinch(row, col); // read the character at (row, col)
+    /* Cursor: highlight player ‘@’ for players, (0,0) for spectators */
+    if (!isSpectator) {
+        bool found = false;
+        for (int row = 0; row < nrows && !found; row++) {
+            for (int col = 0; col < ncols; col++) {
+                int ch = mvinch(row, col) & A_CHARTEXT;   /* strip attributes */
                 if (ch == '@') {
-                    move(row, col); // move cursor to player's position
-                    found = 1;
-                    break; // exit inner loop
+                    move(row, col);
+                    found = true;
+                    break;
                 }
             }
-            if (found) {
-                break; // exit outer loop
-            }
-        }    
-    } else{
-        move(0,0);
+        }
+        if (!found) {
+            move(0, 0);          /* fallback if ‘@’ not yet drawn   */
+        }
+    } else {
+        move(0, 0);
     }
+
     refresh();
 }
 
 /************ parseGold ************/
 static void parseGold(const char* input)
 {
-    int newGold;
-    int totalGold;
-    int remainingGold;
-
     //Parse messages and ensure success
-    if ((sscanf(input+5, "%d %d %d", &newGold, &totalGold, &remainingGold)) != 3) {
+    if ((sscanf(input+5, "%d %d %d", &collected, &total, &remaining)) != 3) {
         return;
     }
 
@@ -367,14 +425,14 @@ static void parseGold(const char* input)
         return;
     }
 
-    if (newGold > 0) {
-        sprintf(displayMessage, "Player %c has %d nuggets (%d unclaimed).", playerChar, totalGold, remainingGold);
-        sprintf(addedMessage, " GOLD received: %d", newGold);
+    if (collected > 0) {
+        sprintf(displayMessage, "Player %c has %d nuggets (%d unclaimed).", playerChar, total, remaining);
+        sprintf(addedMessage, " GOLD received: %d", collected);
         addExtra = true;
         showGold = true;
     }
     else {
-        sprintf(displayMessage, "Player %c has %d nuggets (%d unclaimed).", playerChar, totalGold, remainingGold);
+        sprintf(displayMessage, "Player %c has %d nuggets (%d unclaimed).", playerChar, total, remaining);
         showGold = false;
     }
 
@@ -443,13 +501,13 @@ int main(const int argc, const char* argv[]){
   if (validate) {
     
     //Allocating memory 
-    map = malloc(sizeof(char*) * 500 * 500);
-    playerName = malloc(MaxNameLength + 1);
-    playMessage = malloc(strlen("PLAY ") + MaxNameLength + 1);
-    addedMessage = malloc(sizeof(char*) + 25);
-    displayMessage = malloc(sizeof(char*) + 25);
-    serverHost = malloc(strlen(argv[1]) + 1);
-    serverPort = malloc(strlen(argv[2]) + 1);
+    map = calloc(sizeof(char*) * 500 * 500,1);
+    playerName = calloc(MaxNameLength + 1,1);
+    playMessage = calloc(strlen("PLAY ") + MaxNameLength + 1,1);
+    addedMessage = calloc(sizeof(char*) * 500,1);
+    displayMessage = calloc(sizeof(char*) * 500,1);
+    serverHost = calloc(strlen(argv[1]) + 1,1);
+    serverPort = calloc(strlen(argv[2]) + 1,1);
 
     log_init(stderr);
 
