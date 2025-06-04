@@ -188,6 +188,11 @@ static bool handleInput(void* arg){
     char character = (char)ch;
     char* msg;
 
+    const char* valid = "hjklyubnHJKLYUBNqQ";
+    if (strchr(valid, ch) == NULL) {
+        return false;                   
+    }
+
     if(isSpectator){
         if(character == 'Q' || character=='q'){ //spectator only allowed to type 'Q'
             msg = "KEY Q";
