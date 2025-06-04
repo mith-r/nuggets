@@ -209,7 +209,7 @@ static bool handleInput(void* arg){
     log_s("Sent message: %s\n", msg);
     messageServer(*address, msg);
 
-    bool shouldQuit = (character=='Q' || character=='q'); 
+    //bool shouldQuit = (character=='Q' || character=='q'); 
     free(msg);
     return false; 
 } 
