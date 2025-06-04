@@ -370,12 +370,25 @@ bool processMessage(void* arg, addr_t clientAddress, const char* message) {
                           game->goldRemaining,
                           clientAddress);
 
+<<<<<<< HEAD
           // reset justCollected to 0 immediately after sending
           player->justCollected = 0;
 
           sendDisplayMessage(game, clientAddress);
       }
       return false;
+=======
+        /* player is still here – send their updates */
+        sendGoldMessage(player->justCollected,
+                player->purse,
+                game->goldRemaining,
+                clientAddress);
+        sendDisplayMessage(game, clientAddress);
+      }
+        
+      
+    }
+>>>>>>> a6f3f0fc8f2dea24fe98e536f8f47daba1668b4f
   }
 
   // ----- 3) SPECTATE (“SPECTATE”) -----
@@ -706,7 +719,7 @@ char* displayGame(game_t* game, addr_t fromClient) {
             }
 
             //if ANOTHER player is at that point, display their letter
-            else if (playerLetter != ' ' && playerLetter != '@') {
+            else if (playerLetter != ' ' && playerLetter != '@' && point_getVisibility(localPoint)) {
               mapSymbol = playerLetter;
             }
 
@@ -714,7 +727,7 @@ char* displayGame(game_t* game, addr_t fromClient) {
             else if (point_getVisibility(localPoint)) {
                 //if no player is at that point
                 if (playerLetter == ' ') {
-                    //if gold is not visible (false)
+                    //if gold is not visible 
                     if (localPoint->visibleGold) {
                         //show the terrain at that point
                         mapSymbol = pointValToChar(point_getVal(localPoint));
@@ -883,10 +896,17 @@ static bool movePlayer(game_t* game, player_t* player, int currX, int currY, int
 
 /* returns true if the player is still in the game, false if they quit */
 static bool processKeystroke(game_t* game, player_t* player, const char* keyMessage) {
+<<<<<<< HEAD
   if (game == NULL || player == NULL || keyMessage == NULL) {
       return false;
   }
   char key = keyMessage[0];
+=======
+
+if (player == NULL || keyMessage == NULL) {
+return false;
+}
+>>>>>>> a6f3f0fc8f2dea24fe98e536f8f47daba1668b4f
 
   // --- QUIT ---
   if (key == 'Q' || key == 'q') {
@@ -912,6 +932,7 @@ static bool processKeystroke(game_t* game, player_t* player, const char* keyMess
   bool keepMoving = false;
   moveByKey(key, &dx, &dy, &keepMoving);
 
+<<<<<<< HEAD
   int newX = currX + dx;
   int newY = currY + dy;
   if (!keepMoving) {
@@ -924,6 +945,27 @@ static bool processKeystroke(game_t* game, player_t* player, const char* keyMess
           newX += dx;
           newY += dy;
       }
+=======
+  //if lowercase key (keepingMoving is false)
+  if (!keepMoving) {
+    movePlayer(game, player, currX, currY, newX, newY);
+
+
+    printf("currX: %d, currY: %d", currX, currY);
+    printf("\nnewX: %d, newY: %d", newX, newY);
+
+  }
+
+  //else UPPERCASE key (keepMoving is true), keep moving player until they can't move anymore
+  else { 
+    while(movePlayer(game, player, currX, currY, newX, newY)) {
+      //updating positions
+      currX = newX;
+      currY = newY;
+      newX += dx;
+      newY += dy;
+    }
+>>>>>>> a6f3f0fc8f2dea24fe98e536f8f47daba1668b4f
   }
   return true;
 }
@@ -970,7 +1012,6 @@ static void moveByKey(char key, int* dx, int* dy, bool *keepMoving) {
       return;
   }
 }
-
 
 
 /*
