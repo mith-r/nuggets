@@ -46,16 +46,6 @@ typedef struct game {
 
 
 
-/*
- * Grid struct
- */
-typedef struct grid{
-  int numRows;
-  int numCols;
-  point_t** grid[250][250];  //size of grid
-} grid_t;
-
-
 
 //function prototypes
 game_t* game_new(char* mapFile);
@@ -1003,7 +993,7 @@ static void game_spectate(game_t* game, addr_t clientAddress) {
     log_e("ERROR: memory could not be allocated for gold_message in game_spectate");
   }
 
-  snprintf(gold_message, 16, "GOLD 0 0 %d", goldLeft);
+  snprintf(gold_message, 32, "GOLD 0 0 %d", goldLeft);
   message_send(clientAddress, gold_message);
 
 
@@ -1017,7 +1007,7 @@ static void game_spectate(game_t* game, addr_t clientAddress) {
   }
 
   //concatenate numRows and numCols to grid_message
-  snprintf(grid_message, 16, "GRID %d %d", numRows, numCols);
+  snprintf(grid_message, 32, "GRID %d %d", numRows, numCols);
 
 
   //Sending DISPLAY message
