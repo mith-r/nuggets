@@ -180,13 +180,13 @@ static bool handleInput(void* arg){
     if(!screenReady){
         return false;
     }
-    
-    char character = getch();
-    char* msg;
 
-    if(character == ERR){
+    int ch = getch();
+    if(ch == ERR){
         return false;
     }
+    char character = (char)ch;
+    char* msg;
 
     if(isSpectator){
         if(character == 'Q' || character=='q'){ //spectator only allowed to type 'Q'
@@ -425,9 +425,9 @@ static void parseGold(const char* input){
 
     //purse +=curr;
     collected += curr; 
-    if (collected>total){
-        messageServer(*address, "KEY Q");
-    } else if (curr > 0) {
+    // if (collected>total){
+    //     messageServer(*address, "KEY Q");} else 
+    if (curr > 0) {
         sprintf(displayMessage, "Player %c has %d nuggets (%d unclaimed).", playerChar, purse, remaining);
         addExtra = true;
         showGold = true;
