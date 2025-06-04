@@ -447,8 +447,8 @@ int main(const int argc, const char* argv[]){
     map = malloc(sizeof(char*) * 500 * 500);
     playerName = malloc(MaxNameLength + 1);
     playMessage = malloc(strlen("PLAY ") + MaxNameLength + 1);
-    addedMessage = malloc(sizeof(char*) * 100);
-    displayMessage = malloc(sizeof(char*) * 100);
+    addedMessage = malloc(sizeof(char*) * 500);
+    displayMessage = malloc(sizeof(char*) * 500);
     serverHost = malloc(strlen(argv[1]) + 1);
     serverPort = malloc(strlen(argv[2]) + 1);
 
