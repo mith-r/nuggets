@@ -706,7 +706,7 @@ char* displayGame(game_t* game, addr_t fromClient) {
             }
 
             //if ANOTHER player is at that point, display their letter
-            else if (playerLetter != ' ' && playerLetter != '@') {
+            else if (playerLetter != ' ' && playerLetter != '@' && point_getVisibility(localPoint)) {
               mapSymbol = playerLetter;
             }
 
