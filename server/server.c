@@ -59,7 +59,7 @@ player_t* findPlayerByAddress(game_t* game, addr_t addr);
 player_t* findPlayerByLetter(game_t* game, char playerLetter);
 static char pointValToChar(int pointVal);
 char* displayGame(game_t* game, addr_t fromClient);
-static void processKeystroke(game_t* game, player_t* player, const char* keyMessage);
+static bool processKeystroke(game_t* game, player_t* player, const char* keyMessage);
 static void moveByKey(char key, int* dx, int* dy, bool* keepMoving);
 static void sendGridMessage(game_t* game, addr_t to);
 static void sendGoldMessage(int goldCollected, int purse, int goldRemaining, addr_t to);
@@ -311,6 +311,7 @@ bool processMessage(void* arg, addr_t clientAddress, const char* message) {
       //send GRID, GOLD, DISPLAY messages
       sendGridMessage(game, clientAddress);
       sendGoldMessage(0, 0, game->goldRemaining, clientAddress);
+      player->justCollected = 0;
       sendDisplayMessage(game, clientAddress);
     }
   }
@@ -340,21 +341,42 @@ bool processMessage(void* arg, addr_t clientAddress, const char* message) {
       player_t* player = findPlayerByAddress(game, clientAddress);
 
       if (player != NULL) {
-        processKeystroke(game, player, key);  //process the player's keystrokes/movement
 
-       // player = findPlayerByAddress(game, clientAddress);
-        //if (player == NULL) {
-          //return false;
-        //}
+        /* --------- BEGIN NEW CODE --------- */
+        bool alive = processKeystroke(game, player, key);
 
-        sendGoldMessage(player->justCollected, player->purse, game->goldRemaining, clientAddress);
-        sendDisplayMessage(game, clientAddress);
-
-        //update the display for current spectator if there is any
+        /* always refresh the spectator’s view */
         if (!message_eqAddr(game->spectator, message_noAddr())) {
           game_spectate(game, game->spectator);
         }
-      }
+
+        /* if the player quit, stop processing for this client */
+        if (!alive) {
+          return false;          /* keep server loop running */
+        }
+
+        /* player is still here – send their updates */
+        sendGoldMessage(player->justCollected,
+                player->purse,
+                game->goldRemaining,
+                clientAddress);
+        sendDisplayMessage(game, clientAddress);
+      //   processKeystroke(game, player, key);  //process the player's keystrokes/movement
+
+      //  // player = findPlayerByAddress(game, clientAddress);
+      //   //if (player == NULL) {
+      //     //return false;
+      //   //}
+
+      //   sendGoldMessage(player->justCollected, player->purse, game->goldRemaining, clientAddress);
+      //   sendDisplayMessage(game, clientAddress);
+
+      //   //update the display for current spectator if there is any
+      //   if (!message_eqAddr(game->spectator, message_noAddr())) {
+      //     game_spectate(game, game->spectator);
+
+        
+        }
     }
   }
 
@@ -847,68 +869,111 @@ static bool movePlayer(game_t* game, player_t* player, int currX, int currY, int
 /*
  * Handles keystrokes client presses and updates the player's position on the map
  */
-static void processKeystroke(game_t* game, player_t* player, const char* keyMessage) {
+// static bool processKeystroke(game_t* game, player_t* player, const char* keyMessage) {
 
-  //null check
-  if (player == NULL) {
-    log_v("Player passed into processKeystroke is NULL");
-    return;
-  }
+//   //null check
+//   if (player == NULL) {
+//     log_v("Player passed into processKeystroke is NULL");
+//     return;
+//   }
 
-  if (keyMessage == NULL) {
-    log_v("keyMessage passed into processKeystroke is NULL");
-    return;
-  }
+//   if (keyMessage == NULL) {
+//     log_v("keyMessage passed into processKeystroke is NULL");
+//     return;
+//   }
 
-  //current x, y of player
-  int currX = player->x;
-  int currY = player->y;
+//   //current x, y of player
+//   int currX = player->x;
+//   int currY = player->y;
 
-  //dx, dy -> distance player will move by
-  int dx = 0;
-  int dy = 0;
+//   //dx, dy -> distance player will move by
+//   int dx = 0;
+//   int dy = 0;
 
-  //if uppercase key pressed, we want to keep moving until we can't
-  bool keepMoving = false;
+//   //if uppercase key pressed, we want to keep moving until we can't
+//   bool keepMoving = false;
 
-  char keystroke = keyMessage[0];
-  log_v("Processing player input...\n");
+//   char keystroke = keyMessage[0];
+//   log_v("Processing player input...\n");
 
-  //handle QUIT (q)
-  if ((keystroke == 'Q')|| (keystroke == 'q')) {
-    log_v("Player requested to quit. \n");
+//   //handle QUIT (q)
+//   if ((keystroke == 'Q')|| (keystroke == 'q')) {
+//     log_v("Player requested to quit. \n");
 
-    message_send(player->port, "QUIT player");
-    player_delete(player, game);
-    game->quitCount++;
-    return;
-  }
+//     message_send(player->port, "QUIT player");
+//     player_delete(player, game);
+//     game->quitCount++;
+//     return;
+//   }
 
-  //handle keystrokes
-  moveByKey(keystroke, &dx, &dy, &keepMoving);
-  int newX = currX + dx;
-  int newY = currY + dy;
+//   //handle keystrokes
+//   moveByKey(keystroke, &dx, &dy, &keepMoving);
+//   int newX = currX + dx;
+//   int newY = currY + dy;
 
-  //if lowercase key (keepingMoving is false)
-  if (!keepMoving) {
-    movePlayer(game, player, currX, currY, newX, newY);
+//   //if lowercase key (keepingMoving is false)
+//   if (!keepMoving) {
+//     movePlayer(game, player, currX, currY, newX, newY);
 
 
-    printf("currX: %d, currY: %d", currX, currY);
-    printf("\nnewX: %d, newY: %d", newX, newY);
+//     printf("currX: %d, currY: %d", currX, currY);
+//     printf("\nnewX: %d, newY: %d", newX, newY);
 
-  }
+//   }
 
-  //else UPPERCASE key (keepMoving is true), keep moving player until they can't move anymore
-  else { 
-    while(movePlayer(game, player, currX, currY, newX, newY)) {
-      //updating positions
-      currX = newX;
-      currY = newY;
-      newX += dx;
-      newY += dy;
-    }
-  }
+//   //else UPPERCASE key (keepMoving is true), keep moving player until they can't move anymore
+//   else { 
+//     while(movePlayer(game, player, currX, currY, newX, newY)) {
+//       //updating positions
+//       currX = newX;
+//       currY = newY;
+//       newX += dx;
+//       newY += dy;
+//     }
+//   }
+// }
+
+/* returns true if the player is still in the game, false if they quit */
+static bool processKeystroke(game_t* game,
+  player_t* player,
+  const char* keyMessage)
+{
+if (player == NULL || keyMessage == NULL) {
+return false;
+}
+
+int currX = player->x;
+int currY = player->y;
+int dx = 0, dy = 0;
+bool keepMoving = false;
+char key = keyMessage[0];
+
+/* handle quit */
+if (key == 'Q' || key == 'q') {
+message_send(player->port, "QUIT player");
+player_delete(player, game);
+game->quitCount++;
+return false;               /* player no longer exists */
+}
+
+/* set dx, dy and keepMoving */
+moveByKey(key, &dx, &dy, &keepMoving);
+
+/* perform the move(s) */
+int newX = currX + dx;
+int newY = currY + dy;
+
+if (!keepMoving) {
+movePlayer(game, player, currX, currY, newX, newY);
+} else {
+while (movePlayer(game, player, currX, currY, newX, newY)) {
+currX = newX;
+currY = newY;
+newX += dx;
+newY += dy;
+}
+}
+return true;                    /* player is still active */
 }
 
 
