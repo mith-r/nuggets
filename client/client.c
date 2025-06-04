@@ -192,7 +192,7 @@ static bool handleInput(void* arg){
         if(character == 'Q' || character=='q'){ //spectator only allowed to type 'Q'
             msg = "KEY Q";
             messageServer(*address, msg);
-            return true;
+            return false;
         } else{
             log_v("Spectator only allowed to send 'Q'\n");
             return false;
@@ -211,7 +211,7 @@ static bool handleInput(void* arg){
 
     bool shouldQuit = (character=='Q' || character=='q'); 
     free(msg);
-    return shouldQuit; 
+    return false; 
 } 
 
 
