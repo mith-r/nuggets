@@ -394,17 +394,24 @@ bool processMessage(void* arg, addr_t clientAddress, const char* message) {
     game_spectate(game, clientAddress);
   }
 
-  if (game->totalPlayers == 0 && message_eqAddr(game->spectator, message_noAddr())) {
-    return true;                
-  }
+  // Only end the game if no players and no spectator remain
+if (game->totalPlayers == 0 &&
+  message_eqAddr(game->spectator, message_noAddr()) &&
+  game->quitCount > 0) {
+  log_v("All players and spectator have left — ending game.");
+  return true;
+}
 
-  //handle end of game conditions
-  if (game->goldRemaining == 0 || (game->quitCount == game->totalPlayers && game->quitCount > 0)) {
-    return true; //game is over
-  }
-  else {
-    return false;  //continue game loop
-  }
+// Also end if all gold is collected and no one is watching or playing
+if (game->goldRemaining == 0 &&
+  game->totalPlayers == 0 &&
+  message_eqAddr(game->spectator, message_noAddr())) {
+  log_v("Gold exhausted and no players or spectators — ending game.");
+  return true;
+}
+
+// Continue game loop
+return false;
 }
 
 

@@ -354,7 +354,7 @@ message_loop(void* arg, const float timeout,
 
       if (FD_ISSET(0, &rfds)) {
         // stdin has input ready
-        log_d("message_loop: input ready on stdin");
+        //log_d("message_loop: input ready on stdin",1);
         if (handleInput != NULL && (*handleInput)(arg)) {
           break; // handler says to exit loop 
         }
