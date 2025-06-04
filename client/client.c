@@ -317,41 +317,92 @@ static void handleResize(int k){
 
 /************ showDisplay ************/
 /* Renders the displayMessage, map, and player cursor to the screen */
-static void showDisplay(void){
+// static void showDisplay(void){
+//     clear();
+//     mvprintw(0, 0, "%s", displayMessage);
+//     int wordlen = strlen(displayMessage);
+
+//     if (addExtra) {
+//         mvprintw(0, wordlen, "%s", addedMessage);
+//         wordlen += strlen(addedMessage); // update total length on the line
+//     }
+
+//     while (wordlen < ncols) {
+//         mvaddch(0, wordlen, ' ');  // place a space at position (0, len)
+//         wordlen++;
+//     }
+
+//     mvprintw(1, 0, "%s", map);
+
+//     if(!isSpectator){
+//         int found = 0;
+//         for (int row = 0; row < nrows; row++) {
+//             for (int col = 0; col < ncols; col++) {
+//                 char ch = mvinch(row, col); // read the character at (row, col)
+//                 if (ch == '@') {
+//                     move(row, col); // move cursor to player's position
+//                     found = 1;
+//                     break; // exit inner loop
+//                 }
+//             }
+//             if (found) {
+//                 break; // exit outer loop
+//             }
+//         }    
+//     } else{
+//         move(0,0);
+//     }
+//     refresh();
+// }
+
+static void showDisplay(void)
+{
     clear();
-    mvprintw(0, 0, "%s", displayMessage);
-    int wordlen = strlen(displayMessage);
 
-    if (addExtra) {
-        mvprintw(0, wordlen, "%s", addedMessage);
-        wordlen += strlen(addedMessage); // update total length on the line
+    /* Ensure we always print valid, NUL-terminated strings */
+    const char *line1 = (displayMessage && displayMessage[0] != '\0')
+                        ? displayMessage : "";
+    const char *extra = (addedMessage   && addedMessage[0] != '\0')
+                        ? addedMessage   : "";
+
+    /* First status line */
+    mvprintw(0, 0, "%s", line1);
+    int wordlen = strlen(line1);
+
+    /* Optional “extra” chunk (GOLD / ERROR text) */
+    if (addExtra && extra[0] != '\0') {
+        mvprintw(0, wordlen, "%s", extra);
+        wordlen += strlen(extra);
     }
 
-    while (wordlen < ncols) {
-        mvaddch(0, wordlen, ' ');  // place a space at position (0, len)
-        wordlen++;
+    /* Pad the rest of the first row so old text is cleared */
+    for (int col = wordlen; col < ncols; col++) {
+        mvaddch(0, col, ' ');
     }
 
-    mvprintw(1, 0, "%s", map);
+    /* Game map (may be empty before first DISPLAY) */
+    mvprintw(1, 0, "%s", (map && map[0] != '\0') ? map : "");
 
-    if(!isSpectator){
-        int found = 0;
-        for (int row = 0; row < nrows; row++) {
+    /* Cursor: highlight player ‘@’ for players, (0,0) for spectators */
+    if (!isSpectator) {
+        bool found = false;
+        for (int row = 0; row < nrows && !found; row++) {
             for (int col = 0; col < ncols; col++) {
-                char ch = mvinch(row, col); // read the character at (row, col)
+                int ch = mvinch(row, col) & A_CHARTEXT;   /* strip attributes */
                 if (ch == '@') {
-                    move(row, col); // move cursor to player's position
-                    found = 1;
-                    break; // exit inner loop
+                    move(row, col);
+                    found = true;
+                    break;
                 }
             }
-            if (found) {
-                break; // exit outer loop
-            }
-        }    
-    } else{
-        move(0,0);
+        }
+        if (!found) {
+            move(0, 0);          /* fallback if ‘@’ not yet drawn   */
+        }
+    } else {
+        move(0, 0);
     }
+
     refresh();
 }
 
@@ -450,13 +501,13 @@ int main(const int argc, const char* argv[]){
   if (validate) {
     
     //Allocating memory 
-    map = malloc(sizeof(char*) * 500 * 500);
-    playerName = malloc(MaxNameLength + 1);
-    playMessage = malloc(strlen("PLAY ") + MaxNameLength + 1);
-    addedMessage = malloc(sizeof(char*) * 500);
-    displayMessage = malloc(sizeof(char*) * 500);
-    serverHost = malloc(strlen(argv[1]) + 1);
-    serverPort = malloc(strlen(argv[2]) + 1);
+    map = calloc(sizeof(char*) * 500 * 500,1);
+    playerName = calloc(MaxNameLength + 1,1);
+    playMessage = calloc(strlen("PLAY ") + MaxNameLength + 1,1);
+    addedMessage = calloc(sizeof(char*) * 500,1);
+    displayMessage = calloc(sizeof(char*) * 500,1);
+    serverHost = calloc(strlen(argv[1]) + 1,1);
+    serverPort = calloc(strlen(argv[2]) + 1,1);
 
     log_init(stderr);
 
