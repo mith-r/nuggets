@@ -384,26 +384,6 @@ bool processMessage(void* arg, addr_t clientAddress, const char* message) {
       return false;
   }
 
-<<<<<<< HEAD
-  // Only end the game if no players and no spectator remain
-if (game->totalPlayers == 0 &&
-  message_eqAddr(game->spectator, message_noAddr()) &&
-  game->quitCount > 0) {
-  log_v("All players and spectator have left — ending game.");
-  return true;
-}
-
-// Also end if all gold is collected and no one is watching or playing
-if (game->goldRemaining == 0 &&
-  game->totalPlayers == 0 &&
-  message_eqAddr(game->spectator, message_noAddr())) {
-  log_v("Gold exhausted and no players or spectators — ending game.");
-  return true;
-}
-
-// Continue game loop
-return false;
-=======
   // ----- 4) END‐OF‐GAME CHECKS -----
   // If all players have quit and no spectator remains, exit server loop
   if (game->totalPlayers == 0 && !message_isAddr(game->spectator)) {
@@ -415,7 +395,6 @@ return false;
   }
 
   return false;
->>>>>>> 9d5a04e60f24ded3f1628cb3f1de2dd9dbae7bc4
 }
 
 
