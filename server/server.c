@@ -289,122 +289,112 @@ bool game_start(game_t* game) {
 
 //handles messages to sent to server from client
 bool processMessage(void* arg, addr_t clientAddress, const char* message) {
-
   game_t* game = (game_t*)arg;
-
-  //check if message received was "PLAY", create a new player
-  if (strncmp(message, "PLAY ", strlen("PLAY ")) == 0) {
-    const char* name = message + strlen("PLAY ");
-
-    if (findPlayerByName(game, name) != NULL) {
-      message_send(clientAddress, "QUIT name already in use");
+  if (game == NULL || message == NULL) {
       return false;
-    }
+  }
 
-    player_t* player = playerNew(name, game, clientAddress);
+  // ----- 1) JOIN (“PLAY …”) -----
+  if (strncmp(message, "PLAY ", 5) == 0) {
+      const char* name = message + 5;
 
-    //if player is NULL, we reached max players
-    if (player == NULL) {
-      log_v("Max players exceeded in processMessage");
-    }
+      if (findPlayerByName(game, name) != NULL) {
+          message_send(clientAddress, "QUIT name already in use");
+          return false;
+      }
 
-    //if we haven't reached max players
-    if (game->totalPlayers < MaxPlayers || player ->letter == 'Z') {
-      //send ok message
-      char ok_message[10];
+      player_t* player = playerNew(name, game, clientAddress);
+      if (player == NULL) {
+          // game is full or memory error
+          return false;
+      }
+
+      // Send OK <letter>
+      char ok_message[16];
       snprintf(ok_message, sizeof(ok_message), "OK %c", player->letter);
       message_send(clientAddress, ok_message);
 
-      //send GRID, GOLD, DISPLAY messages
+      // Send initial GRID, GOLD, DISPLAY
       sendGridMessage(game, clientAddress);
       sendGoldMessage(0, 0, game->goldRemaining, clientAddress);
-      player->justCollected = 0;
+      player->justCollected = 0;   // no gold in the first turn
       sendDisplayMessage(game, clientAddress);
-    }
+      return false;
   }
 
-  //if the message was KEY
-  else if (strncmp(message, "KEY ", strlen("KEY ")) == 0) {
-    const char* key = message + strlen("KEY ");
+  // ----- 2) KEY (“KEY X”) -----
+  if (strncmp(message, "KEY ", 4) == 0) {
+      const char* keyStr = message + 4;
+      log_s("Message: %s\n", keyStr);
 
-    //if the the SPECTATOR pressed quit ("Q", "q")
-    if (message_eqAddr(game->spectator, clientAddress)) {
-      if (strcmp(key, "Q") == 0 || strcmp(key, "q") == 0) {
-        //Notify spectator and clear them from game
-        message_send(clientAddress, "QUIT Thanks for watching!");
-        game->spectator = message_noAddr();
+      // If this client is the spectator:
+      if (message_eqAddr(game->spectator, clientAddress)) {
+          if (keyStr[0] == 'Q' || keyStr[0] == 'q') {
+              // Tell spectator to quit
+              message_send(clientAddress, "QUIT Thanks for watching!");
+              game->spectator = message_noAddr();
+          } else {
+              // Just refresh spectator’s view
+              game_spectate(game, game->spectator);
+          }
+          // Spectator quitting does not end the server unless no players remain
+          if (game->totalPlayers == 0 && !message_isAddr(game->spectator)) {
+              return true;
+          }
+          return false;
       }
 
-      //else allow them to continue spectating and refresh their view
-      else if (!message_eqAddr(game->spectator, message_noAddr())) {
-        game_spectate(game, game->spectator);
-      }
-    }
-
-    //if sender is a player, handle movement key
-    else {
-      log_s("Message: %s\n", key);
-      //find player by their address
+      // Otherwise: find the player who sent the key
       player_t* player = findPlayerByAddress(game, clientAddress);
-
       if (player != NULL) {
+          bool alive = processKeystroke(game, player, keyStr);
 
-        /* --------- BEGIN NEW CODE --------- */
-        bool alive = processKeystroke(game, player, key);
+          // Always refresh spectator view if someone is watching
+          if (message_isAddr(game->spectator)) {
+              game_spectate(game, game->spectator);
+          }
 
-        /* always refresh the spectator’s view */
-        if (!message_eqAddr(game->spectator, message_noAddr())) {
-          game_spectate(game, game->spectator);
-        }
+          // If the player just quit:
+          if (!alive) {
+              // If no players remain, shut down the server loop
+              if (game->totalPlayers == 0 && !message_isAddr(game->spectator)) {
+                  return true;
+              }
+              return false;
+          }
 
-        /* if the player quit, stop processing for this client */
-        if (!alive) {
-          return false;          /* keep server loop running */
-        }
+          // Player is still in the game: send updated GOLD + DISPLAY
+          // — but clear justCollected right after sending GOLD, so it doesn't persist
+          sendGoldMessage(player->justCollected,
+                          player->purse,
+                          game->goldRemaining,
+                          clientAddress);
 
-        /* player is still here – send their updates */
-        sendGoldMessage(player->justCollected,
-                player->purse,
-                game->goldRemaining,
-                clientAddress);
-        sendDisplayMessage(game, clientAddress);
-      //   processKeystroke(game, player, key);  //process the player's keystrokes/movement
+          // reset justCollected to 0 immediately after sending
+          player->justCollected = 0;
 
-      //  // player = findPlayerByAddress(game, clientAddress);
-      //   //if (player == NULL) {
-      //     //return false;
-      //   //}
-
-      //   sendGoldMessage(player->justCollected, player->purse, game->goldRemaining, clientAddress);
-      //   sendDisplayMessage(game, clientAddress);
-
-      //   //update the display for current spectator if there is any
-      //   if (!message_eqAddr(game->spectator, message_noAddr())) {
-      //     game_spectate(game, game->spectator);
-
-        
-        }
-    }
+          sendDisplayMessage(game, clientAddress);
+      }
+      return false;
   }
 
-  //handle SPECTATE message
-
-  else if (strncmp(message, "SPECTATE", strlen("SPECTATE")) == 0) {
-    //add or update spectator in the game
-    game_spectate(game, clientAddress);
+  // ----- 3) SPECTATE (“SPECTATE”) -----
+  if (strncmp(message, "SPECTATE", 8) == 0) {
+      game_spectate(game, clientAddress);
+      return false;
   }
 
-  if (game->totalPlayers == 0 && message_eqAddr(game->spectator, message_noAddr())) {
-    return true;                
+  // ----- 4) END‐OF‐GAME CHECKS -----
+  // If all players have quit and no spectator remains, exit server loop
+  if (game->totalPlayers == 0 && !message_isAddr(game->spectator)) {
+      return true;
+  }
+  // If all gold has been collected, end the game
+  if (game->goldRemaining == 0) {
+      return true;
   }
 
-  //handle end of game conditions
-  if (game->goldRemaining == 0 || (game->quitCount == game->totalPlayers && game->quitCount > 0)) {
-    return true; //game is over
-  }
-  else {
-    return false;  //continue game loop
-  }
+  return false;
 }
 
 
@@ -893,51 +883,47 @@ static bool movePlayer(game_t* game, player_t* player, int currX, int currY, int
 
 /* returns true if the player is still in the game, false if they quit */
 static bool processKeystroke(game_t* game, player_t* player, const char* keyMessage) {
+  if (game == NULL || player == NULL || keyMessage == NULL) {
+      return false;
+  }
+  char key = keyMessage[0];
 
-if (player == NULL || keyMessage == NULL) {
-return false;
-}
+  // --- QUIT ---
+  if (key == 'Q' || key == 'q') {
+      // Notify this client to exit
+      message_send(player->port, "QUIT player");
 
-int currX = player->x;
-int currY = player->y;
-int dx = 0, dy = 0;
-bool keepMoving = false;
-char key = keyMessage[0];
+      // Remove them from the game
+      player_delete(player, game);
 
-/* handle quit */
-if (key == 'Q' || key == 'q') {
-message_send(player->port, "QUIT player");
-player_delete(player, game);
-game->quitCount++;
-return false;               /* player no longer exists */
-}
-
-/* set dx, dy and keepMoving */
-moveByKey(key, &dx, &dy, &keepMoving);
-
-/* perform the move(s) */
-int newX = currX + dx;
-int newY = currY + dy;
-
-  //if lowercase key (keepingMoving is false)
-  if (!keepMoving) {
-    movePlayer(game, player, currX, currY, newX, newY);
-
-
-    printf("currX: %d, currY: %d", currX, currY);
-    printf("\nnewX: %d, newY: %d", newX, newY);
-
+      // If no players remain and no spectator, signal server shutdown
+      if (game->totalPlayers == 0 && !message_isAddr(game->spectator)) {
+          return false;
+      }
+      // Otherwise, update quitCount and keep server running
+      game->quitCount++;
+      return false;
   }
 
-  //else UPPERCASE key (keepMoving is true), keep moving player until they can't move anymore
-  else { 
-    while(movePlayer(game, player, currX, currY, newX, newY)) {
-      //updating positions
-      currX = newX;
-      currY = newY;
-      newX += dx;
-      newY += dy;
-    }
+  // --- MOVEMENT ---
+  int currX = player->x;
+  int currY = player->y;
+  int dx = 0, dy = 0;
+  bool keepMoving = false;
+  moveByKey(key, &dx, &dy, &keepMoving);
+
+  int newX = currX + dx;
+  int newY = currY + dy;
+  if (!keepMoving) {
+      movePlayer(game, player, currX, currY, newX, newY);
+  } else {
+      // Continuous movement until blocked
+      while (movePlayer(game, player, currX, currY, newX, newY)) {
+          currX = newX;
+          currY = newY;
+          newX += dx;
+          newY += dy;
+      }
   }
   return true;
 }
