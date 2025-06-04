@@ -237,7 +237,7 @@ game_t* game_new(char* mapFile) {
     return NULL;
   }
 
-  player_t** player_array = malloc(sizeof(player_t)*MaxPlayers);
+  player_t** player_array = malloc(sizeof(player_t*)*MaxPlayers);
   game->player_array = player_array;
 
   //instantitate array of players, all null initially
@@ -414,7 +414,7 @@ static void sendGridMessage(game_t* game, addr_t to) {
  * Helper function for processMessage that sends goldMessage
  */
 static void sendGoldMessage(int goldCollected, int purse, int goldRemaining, addr_t to) {
-  char buffer[30];
+  char buffer[64];
   snprintf(buffer, sizeof(buffer), "GOLD %d %d %d", goldCollected, purse, goldRemaining);
   message_send(to, buffer);
 }
@@ -1010,7 +1010,7 @@ static void game_spectate(game_t* game, addr_t clientAddress) {
   // Sending the GRID message
   int numRows = grid_getNumRows(game->fullMap);
   int numCols = grid_getNumCols(game->fullMap);
-  char* grid_message = calloc(1, 14);
+  char* grid_message = calloc(1, 32);
   //check if memory was correctly allocated
   if (grid_message == NULL) {
     log_e("ERROR: memory could not be allocated for grid_message in game_spectate");
