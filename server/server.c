@@ -368,22 +368,9 @@ bool processMessage(void* arg, addr_t clientAddress, const char* message) {
                 game->goldRemaining,
                 clientAddress);
         sendDisplayMessage(game, clientAddress);
-      //   processKeystroke(game, player, key);  //process the player's keystrokes/movement
-
-      //  // player = findPlayerByAddress(game, clientAddress);
-      //   //if (player == NULL) {
-      //     //return false;
-      //   //}
-
-      //   sendGoldMessage(player->justCollected, player->purse, game->goldRemaining, clientAddress);
-      //   sendDisplayMessage(game, clientAddress);
-
-      //   //update the display for current spectator if there is any
-      //   if (!message_eqAddr(game->spectator, message_noAddr())) {
-      //     game_spectate(game, game->spectator);
-
+      }
         
-        }
+      
     }
   }
 
