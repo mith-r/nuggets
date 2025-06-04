@@ -416,7 +416,7 @@ static void parseGold(const char* input)
 
     //If spectator display this message
     if (isSpectator) {
-        sprintf(displayMessage, "Spectator: %d nuggets unclaimed. Play at %s %s.", &remaining, serverHost, serverPort);
+        sprintf(displayMessage, "Spectator: %d nuggets unclaimed. Play at %s %s.", remaining, serverHost, serverPort);
         return;
     }
 
