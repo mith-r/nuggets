@@ -716,7 +716,7 @@ char* displayGame(game_t* game, addr_t fromClient) {
             }
 
             //if ANOTHER player is at that point, display their letter
-            else if (playerLetter != ' ' && playerLetter != '@') {
+            else if (playerLetter != ' ' && playerLetter != '@' && point_getVisibility(localPoint)) {
               mapSymbol = playerLetter;
             }
 
@@ -724,7 +724,7 @@ char* displayGame(game_t* game, addr_t fromClient) {
             else if (point_getVisibility(localPoint)) {
                 //if no player is at that point
                 if (playerLetter == ' ') {
-                    //if gold is not visible (false)
+                    //if gold is not visible 
                     if (localPoint->visibleGold) {
                         //show the terrain at that point
                         mapSymbol = pointValToChar(point_getVal(localPoint));
@@ -892,10 +892,8 @@ static bool movePlayer(game_t* game, player_t* player, int currX, int currY, int
 
 
 /* returns true if the player is still in the game, false if they quit */
-static bool processKeystroke(game_t* game,
-  player_t* player,
-  const char* keyMessage)
-{
+static bool processKeystroke(game_t* game, player_t* player, const char* keyMessage) {
+
 if (player == NULL || keyMessage == NULL) {
 return false;
 }
@@ -921,17 +919,27 @@ moveByKey(key, &dx, &dy, &keepMoving);
 int newX = currX + dx;
 int newY = currY + dy;
 
-if (!keepMoving) {
-movePlayer(game, player, currX, currY, newX, newY);
-} else {
-while (movePlayer(game, player, currX, currY, newX, newY)) {
-currX = newX;
-currY = newY;
-newX += dx;
-newY += dy;
-}
-}
-return true;                    /* player is still active */
+  //if lowercase key (keepingMoving is false)
+  if (!keepMoving) {
+    movePlayer(game, player, currX, currY, newX, newY);
+
+
+    printf("currX: %d, currY: %d", currX, currY);
+    printf("\nnewX: %d, newY: %d", newX, newY);
+
+  }
+
+  //else UPPERCASE key (keepMoving is true), keep moving player until they can't move anymore
+  else { 
+    while(movePlayer(game, player, currX, currY, newX, newY)) {
+      //updating positions
+      currX = newX;
+      currY = newY;
+      newX += dx;
+      newY += dy;
+    }
+  }
+  return true;
 }
 
 
@@ -976,7 +984,6 @@ static void moveByKey(char key, int* dx, int* dy, bool *keepMoving) {
       return;
   }
 }
-
 
 
 /*
