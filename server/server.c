@@ -986,7 +986,6 @@ static void moveByKey(char key, int* dx, int* dy, bool *keepMoving) {
 }
 
 
-
 /*
  * Allows client to spectate the game
  */
