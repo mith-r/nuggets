@@ -399,19 +399,6 @@ bool processMessage(void *arg, addr_t clientAddress, const char *message)
                         game->goldRemaining,
                         clientAddress);
         sendDisplayMessage(game, clientAddress);
-        //   processKeystroke(game, player, key);  //process the player's keystrokes/movement
-
-        //  // player = findPlayerByAddress(game, clientAddress);
-        //   //if (player == NULL) {
-        //     //return false;
-        //   //}
-
-        //   sendGoldMessage(player->justCollected, player->purse, game->goldRemaining, clientAddress);
-        //   sendDisplayMessage(game, clientAddress);
-
-        //   //update the display for current spectator if there is any
-        //   if (!message_eqAddr(game->spectator, message_noAddr())) {
-        //     game_spectate(game, game->spectator);
       }
     }
   }
@@ -784,7 +771,7 @@ char *displayGame(game_t *game, addr_t fromClient)
         }
 
         // if ANOTHER player is at that point, display their letter
-        else if (playerLetter != ' ' && playerLetter != '@')
+        else if (playerLetter != ' ' && playerLetter != '@' && point_getVisibility(localPoint))
         {
           mapSymbol = playerLetter;
         }
@@ -796,7 +783,7 @@ char *displayGame(game_t *game, addr_t fromClient)
           if (playerLetter == ' ')
           {
             // if gold is not visible
-            if (!localPoint->visibleGold)
+            if (localPoint->visibleGold)
             {
               // show the terrain at that point
               mapSymbol = pointValToChar(point_getVal(localPoint));
@@ -981,10 +968,9 @@ static bool movePlayer(game_t *game, player_t *player, int currX, int currY, int
 }
 
 /* returns true if the player is still in the game, false if they quit */
-static bool processKeystroke(game_t *game,
-                             player_t *player,
-                             const char *keyMessage)
+static bool processKeystroke(game_t *game, player_t *player, const char *keyMessage)
 {
+
   if (player == NULL || keyMessage == NULL)
   {
     return false;
@@ -1012,21 +998,28 @@ static bool processKeystroke(game_t *game,
   int newX = currX + dx;
   int newY = currY + dy;
 
+  // if lowercase key (keepingMoving is false)
   if (!keepMoving)
   {
     movePlayer(game, player, currX, currY, newX, newY);
+
+    printf("currX: %d, currY: %d", currX, currY);
+    printf("\nnewX: %d, newY: %d", newX, newY);
   }
+
+  // else UPPERCASE key (keepMoving is true), keep moving player until they can't move anymore
   else
   {
     while (movePlayer(game, player, currX, currY, newX, newY))
     {
+      // updating positions
       currX = newX;
       currY = newY;
       newX += dx;
       newY += dy;
     }
   }
-  return true; /* player is still active */
+  return true;
 }
 
 /*
