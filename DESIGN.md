@@ -1,6 +1,6 @@
-# CS50 Nuggets – Design Specification
+# CS50 Nuggets Design Specification
 
-**TGMBO shark – Spring 2025**
+**TGMBO shark Spring 2025**
 
 ---
 
@@ -70,7 +70,7 @@ typedef struct game {
 ### Pseudo Code - Server Flow
 
 ```c
-parseArgs(argc, argv) → mapFile + seed
+parseArgs(argc, argv) â†’ mapFile + seed
 game = game_new(mapFile)
 display fullMap to stdout
 game_start(game)
@@ -167,12 +167,12 @@ handleInput():
   send KEY message to server
 
 handleMessage():
-  if QUIT → print + exit
-  if OK → save player letter
-  if GRID → set display size
-  if GOLD → update stats
-  if DISPLAY → update map
-  if ERROR → show error
+  if QUIT â†’ print + exit
+  if OK â†’ save player letter
+  if GRID â†’ set display size
+  if GOLD â†’ update stats
+  if DISPLAY â†’ update map
+  if ERROR â†’ show error
 ```
 
 ## Testing Plan
