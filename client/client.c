@@ -45,6 +45,7 @@ char* serverPort;
 char* map;
 int nrows = 0;
 int ncols = 0;
+static bool screenReady = false;
 
 /************ gold tracking variables ************/
 int collected = 0;
@@ -103,6 +104,7 @@ static void setUpDisplay(int nrows, int ncols){
     attron(COLOR_PAIR(1));
 
     refresh(); //apply changes
+    screenReady = true;
 }
 
 /************ exitGame ************/
@@ -174,12 +176,16 @@ void messageServer(addr_t addr, char* message){
 /************ handleInput ************/
 /* Handles user key input and sends appropriate message to server */
 static bool handleInput(void* arg){
+    
+    if(!screenReady){
+        return false;
+    }
+    
     char character = getch();
     char* msg;
 
-    if(character == EOF){
-        messageServer(*address, "KEY Q");
-        return true;
+    if(character == ERR){
+        return false;
     }
 
     if(isSpectator){
