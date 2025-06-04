@@ -92,6 +92,14 @@ int main(int argc, char *argv[])
   game_t *game = game_new(mapFile);
   log_v("Initializing game");
 
+  // Show the full map like a spectator
+  char *fullMap = displayGame(game, message_noAddr());
+  if (fullMap != NULL)
+  {
+    printf("%s\n", fullMap); // prints full map to stdout
+    free(fullMap);           // free after use
+  }
+
   // if game failed to be created, terminate
   if (game == NULL)
   {
