@@ -934,10 +934,8 @@ static bool movePlayer(game_t* game, player_t* player, int currX, int currY, int
 // }
 
 /* returns true if the player is still in the game, false if they quit */
-static bool processKeystroke(game_t* game,
-  player_t* player,
-  const char* keyMessage)
-{
+static bool processKeystroke(game_t* game, player_t* player, const char* keyMessage) {
+
 if (player == NULL || keyMessage == NULL) {
 return false;
 }
@@ -983,6 +981,7 @@ int newY = currY + dy;
       newY += dy;
     }
   }
+  return true;
 }
 
 
