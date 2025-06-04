@@ -677,7 +677,7 @@ char* displayGame(game_t* game, addr_t fromClient) {
             else if (point_getVisibility(localPoint)) {
                 //if no player is at that point
                 if (playerLetter == ' ') {
-                    //if gold is not visible (false)
+                    //if gold is not visible 
                     if (localPoint->visibleGold) {
                         //show the terrain at that point
                         mapSymbol = pointValToChar(point_getVal(localPoint));
@@ -895,8 +895,8 @@ static void processKeystroke(game_t* game, player_t* player, const char* keyMess
     movePlayer(game, player, currX, currY, newX, newY);
 
 
-    printf("currX: %d, currY: %d", currX, currY);
-    printf("\nnewX: %d, newY: %d", newX, newY);
+    // printf("currX: %d, currY: %d", currX, currY);
+    // printf("\nnewX: %d, newY: %d", newX, newY);
 
   }
 
