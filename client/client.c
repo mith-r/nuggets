@@ -366,8 +366,8 @@ static void parseGold(const char* input){
         return;
     }
 
-    purse +=curr;
-    collected += purse; 
+    //purse +=curr;
+    collected += curr; 
     if (collected>total){
         messageServer(*address, "KEY Q");
     } else if (curr > 0) {
