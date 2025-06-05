@@ -28,7 +28,6 @@ typedef struct player {
   addr_t port;   //port player is connected to
 } player_t;
 
-
 /*
  * game struct
  */
@@ -44,10 +43,9 @@ typedef struct game {
   int quitCount;
 } game_t;
 
-
-
-
-//function prototypes
+/*
+ * function prototypes
+ */
 game_t* game_new(char* mapFile);
 bool game_start(game_t* game);
 void parseArgs(const int argc, char* argv[], char** mapFile, char** seed);
@@ -72,14 +70,14 @@ static void game_delete(game_t* game);
 static player_t *findPlayerByName(game_t *game, const char *name);
 
 
-//global constants
+/*
+ * global constants
+ */
 const int MaxNameLength = 50;   // max number of chars in playerName
 int MaxPlayers = 26;      // maximum number of players
 int GoldTotal = 250;      // amount of gold in the game
 int GoldMinNumPiles = 10; // minimum number of gold piles
 int GoldMaxNumPiles = 30; // maximum number of gold piles
-
-
 
 /*
  * main
@@ -119,7 +117,6 @@ int main (int argc, char* argv[]) {
   game_delete(game);
   return 0;
 }
-
 
 //validates arguments
 void parseArgs(const int argc, char* argv[], char** mapFile, char** seed) {
@@ -184,7 +181,6 @@ void parseArgs(const int argc, char* argv[], char** mapFile, char** seed) {
     }
 }
 
-
 /*
  * validates the provided seed
  */
@@ -213,8 +209,6 @@ int validateSeed(char* seed) {
 
   return -1; //error
 }
-
-
 
 //creates a new game struct
 game_t* game_new(char* mapFile) {
@@ -261,8 +255,6 @@ game_t* game_new(char* mapFile) {
   return game;
 }
 
-
-
 //starts the game and listens for incoming messages
 bool game_start(game_t* game) {
 
@@ -285,7 +277,6 @@ bool game_start(game_t* game) {
   log_v("message loop successful");
   return true;
 }
-
 
 //handles messages to sent to server from client
 bool processMessage(void* arg, addr_t clientAddress, const char* message) {
@@ -387,7 +378,6 @@ bool processMessage(void* arg, addr_t clientAddress, const char* message) {
   }
 
   //handle SPECTATE message
-
   else if (strncmp(message, "SPECTATE", strlen("SPECTATE")) == 0) {
     //add or update spectator in the game
     game_spectate(game, clientAddress);
@@ -405,7 +395,6 @@ bool processMessage(void* arg, addr_t clientAddress, const char* message) {
     return false;  //continue game loop
   }
 }
-
 
 /*
  * Helper function for processMessage that sends gridMessage
@@ -445,7 +434,6 @@ static player_t *findPlayerByName(game_t *game, const char *name)
     return NULL;
 }
 
-
 /*
  * Helper function for processMessage that sends goldMessage
  */
@@ -465,7 +453,6 @@ static void sendDisplayMessage(game_t* game, addr_t to) {
     free(displayMessage);
   }
 }
-
 
 /*
  * Instantiates new player struct
@@ -571,7 +558,6 @@ void assignGoldToPlayer(player_t* player, game_t* game) {
     }
   }
 }
-
 
 /*
  * Assigns a random spot to a player on the map
@@ -682,7 +668,6 @@ char* displayGame(game_t* game, addr_t fromClient) {
     isSpectator = true;
   }
 
-  
   //string display will represent/display the entire game at that current moment
   char* display = malloc((totalSpaces*10));
 
@@ -765,7 +750,6 @@ char* displayGame(game_t* game, addr_t fromClient) {
   printf("RAW DISPLAY:\n%s\n", display);
   return display;
 }
-
 
 /*
  * Given a value of a point on the map append its correct char to the display string
@@ -906,7 +890,6 @@ static bool movePlayer(game_t* game, player_t* player, int currX, int currY, int
     return false;
 }
 
-
 /* returns true if the player is still in the game, false if they quit */
 static bool processKeystroke(game_t* game, player_t* player, const char* keyMessage) {
   if (game == NULL || player == NULL || keyMessage == NULL) {
@@ -955,7 +938,6 @@ static bool processKeystroke(game_t* game, player_t* player, const char* keyMess
   return true;
 }
 
-
 /*
  * Helper function that handles movement based on which key client pressed
  * Processes LOWERCASE keys (move once)
@@ -997,8 +979,6 @@ static void moveByKey(char key, int* dx, int* dy, bool *keepMoving) {
       return;
   }
 }
-
-
 
 /*
  * Allows client to spectate the game
