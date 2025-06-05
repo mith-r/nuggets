@@ -102,6 +102,7 @@ valgrind --leak-check=full ./gridTest
 ```
 
 #### Assumptions
+
 - The map file is valid and rectangular.
 - Maximum grid size is 1000x1000.
 - Each player has a unique view of the map based on their visibility constraints.

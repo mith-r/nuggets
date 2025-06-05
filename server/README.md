@@ -1,6 +1,6 @@
 # Benjamin Lin, Tarini Gupta, Mithun Rameshkumar, Gustavo Lopez-Flemming
 
-## CS50, Spring 2025, Nuggets Server
+## CS50, Spring 2025
 
 ### Server
 
