@@ -112,6 +112,7 @@ static void setUpDisplay(int nrows, int ncols){
 static void exitGame(const char* input){
     if(input == NULL){
         log_v("NULL input to quit\n");
+        endwin();
         exit(1);
     }
     log_s("%s \n", displayMessage); //stored globally
@@ -122,6 +123,7 @@ static void exitGame(const char* input){
     fprintf(stdout, "%s \n", input); //quit message
 
     cleanGame();
+    exit(0);
 }
 
 /************ serverComs ************/
@@ -209,9 +211,9 @@ static bool handleInput(void* arg){
     log_s("Sent message: %s\n", msg);
     messageServer(*address, msg);
 
-    bool shouldQuit = (character=='Q' || character=='q'); 
+    //bool shouldQuit = (character=='Q' || character=='q'); 
     free(msg);
-    return shouldQuit; 
+    return false; 
 } 
 
 
@@ -228,13 +230,13 @@ static bool handleMessage(void* arg, const addr_t address, const char* input){
         return true;
     }
     //handle "OK"
-    if (strncmp(input, "OK ", strlen("OK ")) == 0) {
-        /* attempt to pull exactly one character after the space */
-        if (sscanf(input, "OK %c", &playerChar) == 1) {
-            return false;                  /* parsed cleanly → keep looping */
+    if(strncmp(input,"OK", strlen("OK"))==0){
+        if(strlen(input)!=4){
+            log_v("Error: Incorrect OK message fomat in handleMessage\n");
+            return true;
         }
-        log_v("Malformed OK message in handleMessage\n");
-        return true;                       /* fatal protocol error → end loop */
+        playerChar = input[3]; //extract player character (4th)
+        return false;
     }
     //handle "GRID"
     if(strncmp(input,"GRID", strlen("GRID"))==0){
@@ -407,13 +409,10 @@ static void showDisplay(void)
 }
 
 /************ parseGold ************/
-static void parseGold(const char* input){
-
-    int curr = 0; //how much you just collected
-    int purse = 0; //how much each individual client has
-
+static void parseGold(const char* input)
+{
     //Parse messages and ensure success
-    if ((sscanf(input+5, "%d %d %d", &curr, &purse, &remaining)) != 3) {
+    if ((sscanf(input+5, "%d %d %d", &collected, &total, &remaining)) != 3) {
         return;
     }
 
@@ -423,16 +422,14 @@ static void parseGold(const char* input){
         return;
     }
 
-    //purse +=curr;
-    collected += curr; 
-    // if (collected>total){
-    //     messageServer(*address, "KEY Q");} else 
-    if (curr > 0) {
-        sprintf(displayMessage, "Player %c has %d nuggets (%d unclaimed).", playerChar, purse, remaining);
+    if (collected > 0) {
+        sprintf(displayMessage, "Player %c has %d nuggets (%d unclaimed).", playerChar, total, remaining);
+        sprintf(addedMessage, " GOLD received: %d", collected);
         addExtra = true;
         showGold = true;
-    } else {
-        sprintf(displayMessage, "Player %c has %d nuggets (%d unclaimed).", playerChar, purse, remaining);
+    }
+    else {
+        sprintf(displayMessage, "Player %c has %d nuggets (%d unclaimed).", playerChar, total, remaining);
         showGold = false;
     }
 
