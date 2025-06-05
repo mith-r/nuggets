@@ -566,8 +566,65 @@ Default: return ' ' (empty)
 
 ### `displayGame`:
 ```
+Set localGrid to NULL
+Set fullGrid to the game's full map
 
+Get number of rows and columns from fullGrid
+Calculate totalSpaces as (rows * columns * 10)  // buffer size
 
+Set isSpectator to false
+
+Find player associated with fromClient address
+
+If player is found:
+    Set localGrid to player's grid (partial view)
+Else:
+    Mark as spectator
+
+Allocate memory for display string large enough for full display
+If allocation fails:
+    Log error and return NULL
+
+Initialize display string with "DISPLAY\n"
+
+For each row i in fullGrid:
+    For each column j in fullGrid:
+        Get globalPoint at (i, j) from fullGrid
+        Set default mapSymbol to space ' '
+
+        If client is a player (not spectator):
+            Get localPoint at (i, j) from localGrid
+            Get any player character at globalPoint
+
+            If player is standing at (i, j):
+                mapSymbol = '@'
+            Else if localPoint is visible:
+                If another player is here:
+                    mapSymbol = that player's letter
+                Else if gold is here and gold is not visible:
+                    mapSymbol = '*'
+                Else:
+                    mapSymbol = terrain char from localPoint
+            Else:
+                mapSymbol = ' '  // not visible
+
+        Else if client is a spectator:
+            Get player character at globalPoint
+            If no player is here:
+                If gold exists:
+                    mapSymbol = '*'
+                Else:
+                    mapSymbol = terrain char from globalPoint
+            Else:
+                mapSymbol = that player's letter
+
+        Append mapSymbol to display string
+    End inner loop
+
+    Append newline '\n' to display string
+End outer loop
+
+Return the display string
 ```
 
 ### `processKeyStroke`:
