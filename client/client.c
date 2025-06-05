@@ -112,6 +112,7 @@ static void setUpDisplay(int nrows, int ncols){
 static void exitGame(const char* input){
     if(input == NULL){
         log_v("NULL input to quit\n");
+        endwin();
         exit(1);
     }
     log_s("%s \n", displayMessage); //stored globally
@@ -122,6 +123,7 @@ static void exitGame(const char* input){
     fprintf(stdout, "%s \n", input); //quit message
 
     cleanGame();
+    exit(0);
 }
 
 /************ serverComs ************/
@@ -192,7 +194,7 @@ static bool handleInput(void* arg){
         if(character == 'Q' || character=='q'){ //spectator only allowed to type 'Q'
             msg = "KEY Q";
             messageServer(*address, msg);
-            return false;
+            return true;
         } else{
             log_v("Spectator only allowed to send 'Q'\n");
             return false;
