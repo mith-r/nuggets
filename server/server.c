@@ -349,7 +349,6 @@ bool processMessage(void* arg, addr_t clientAddress, const char* message) {
 
       if (player != NULL) {
 
-        /* --------- BEGIN NEW CODE --------- */
         bool alive = processKeystroke(game, player, key);
 
         /* always refresh the spectator’s view */
