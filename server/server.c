@@ -369,22 +369,17 @@ bool processMessage(void* arg, addr_t clientAddress, const char* message) {
                 game->goldRemaining,
                 clientAddress);
         sendDisplayMessage(game, clientAddress);
-      //   processKeystroke(game, player, key);  //process the player's keystrokes/movement
-
-      //  // player = findPlayerByAddress(game, clientAddress);
-      //   //if (player == NULL) {
-      //     //return false;
-      //   //}
-
-      //   sendGoldMessage(player->justCollected, player->purse, game->goldRemaining, clientAddress);
-      //   sendDisplayMessage(game, clientAddress);
-
-      //   //update the display for current spectator if there is any
-      //   if (!message_eqAddr(game->spectator, message_noAddr())) {
-      //     game_spectate(game, game->spectator);
-
-        
         }
+
+        for (int i = 0; i < MaxPlayers; i ++) {
+          player_t* other = game->player_array[i];
+          if (other != NULL && other != player) {
+            sendGoldMessage(0, other->purse, game->goldRemaining, other->port);
+            sendDisplayMessage(game, other->port);
+
+          }
+        }
+      
     }
   }
 
@@ -844,16 +839,6 @@ static bool movePlayer(game_t* game, player_t* player, int currX, int currY, int
             // Update visibility for the current player
             mapUpdate(localGrid, newX, newY);
 
-            // Clear the player's letter from points that are no longer visible
-            for (int row = 0; row < grid_getNumRows(fullGrid); row++) {
-                for (int col = 0; col < grid_getNumCols(fullGrid); col++) {
-                    point_t* globalPoint = grid_get(fullGrid, row, col);
-                    if (point_getPlayer(globalPoint) == player->letter && !point_getVisibility(grid_get(localGrid, row, col))) {
-                        point_setPlayer(globalPoint, ' ');  // Clear the player letter
-                    }
-                }
-            }
-
             // Update visibility for other players
             for (int i = 0; i < game->totalPlayers; i++) {
                 player_t* other = game->player_array[i];
@@ -896,15 +881,6 @@ static bool movePlayer(game_t* game, player_t* player, int currX, int currY, int
         // Update visibility for the current player
         mapUpdate(localGrid, newX, newY);
 
-        // Clear the player's letter from points that are no longer visible
-        for (int row = 0; row < grid_getNumRows(fullGrid); row++) {
-            for (int col = 0; col < grid_getNumCols(fullGrid); col++) {
-                point_t* globalPoint = grid_get(fullGrid, row, col);
-                if (point_getPlayer(globalPoint) == player->letter && !point_getVisibility(grid_get(localGrid, row, col))) {
-                    point_setPlayer(globalPoint, ' ');  // Clear the player letter
-                }
-            }
-        }
 
         // Update visibility for other players
         for (int i = 0; i < game->totalPlayers; i++) {
