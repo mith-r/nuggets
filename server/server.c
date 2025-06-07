@@ -919,8 +919,6 @@ static bool processKeystroke(game_t* game, player_t* player, const char* keyMess
       // Notify this client to exit
       message_send(player->port, "QUIT player");
 
-      // Remove them from the game
-      player_delete(player, game);
 
       // Check if the game is over
       if (game->goldRemaining == 0 || (game->quitCount == game->totalPlayers && game->quitCount > 0)) {
@@ -929,6 +927,9 @@ static bool processKeystroke(game_t* game, player_t* player, const char* keyMess
 
       // Otherwise, update quitCount and keep server running
       game->quitCount++;
+      // Remove them from the game
+      player_delete(player, game);
+      
       return false;
   }
 
