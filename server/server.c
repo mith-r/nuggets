@@ -70,6 +70,7 @@ static void game_end(game_t* game);
 static void player_delete(player_t* player, game_t* game);
 static void game_delete(game_t* game);
 static player_t *findPlayerByName(game_t *game, const char *name);
+static void showServerMap(game_t* game);
 
 
 //global constants
@@ -88,7 +89,8 @@ int main (int argc, char* argv[]) {
   char* mapFile;
   char* seed = NULL;
 
-  log_init(stderr);  //initialize the log
+  //initialize the log
+  log_init(NULL);  
 
   parseArgs(argc, argv, &mapFile, &seed);
  
@@ -393,16 +395,15 @@ bool processMessage(void* arg, addr_t clientAddress, const char* message) {
     game_spectate(game, clientAddress);
   }
 
-  if (game->totalPlayers == 0 && message_eqAddr(game->spectator, message_noAddr())) {
-    return true;                
-  }
 
-  //handle end of game conditions
-  if (game->goldRemaining == 0 || (game->quitCount == game->totalPlayers && game->quitCount > 0)) {
-    return true; //game is over
-  }
-  else {
-    return false;  //continue game loop
+
+if (game->goldRemaining == 0 || (game->totalPlayers == 0 
+  && message_eqAddr(game->spectator, message_noAddr()))) {
+    showServerMap(game);
+    return true;
+  } else {
+    showServerMap(game);
+    return false;
   }
 }
 
@@ -762,8 +763,23 @@ char* displayGame(game_t* game, addr_t fromClient) {
     // add newline after each row
     strcat(display, "\n");
 }
-  printf("RAW DISPLAY:\n%s\n", display);
   return display;
+}
+
+/* Print the spectator's view to the server console.*/
+static void showServerMap(game_t* game)
+{
+  char* disp = displayGame(game, message_noAddr());
+  if (disp == NULL) {
+    return;
+  }
+  char* start = strchr(disp, '\n');
+  if (start != NULL) {
+    printf("%s\n", start +1);
+  } else {
+    printf("%s\n", disp);
+  }
+  free(disp);
 }
 
 
@@ -914,24 +930,23 @@ static bool processKeystroke(game_t* game, player_t* player, const char* keyMess
   }
   char key = keyMessage[0];
 
+
   // --- QUIT ---
   if (key == 'Q' || key == 'q') {
       // Notify this client to exit
       message_send(player->port, "QUIT player");
 
-
-      // Check if the game is over
-      if (game->goldRemaining == 0 || (game->quitCount == game->totalPlayers && game->quitCount > 0)) {
-          return true; // Game is over
-      }
-
-      // Otherwise, update quitCount and keep server running
+      //Count the quit and remove the player
       game->quitCount++;
-      // Remove them from the game
       player_delete(player, game);
-      
-      return false;
+
+      //Determine if the game should end
+      if (game->goldRemaining == 0 || (game->totalPlayers == 0 && message_eqAddr(game->spectator, message_noAddr()))) {
+          return true;
+      }
+    return false;
   }
+
 
   // --- MOVEMENT ---
   int currX = player->x;
@@ -943,14 +958,14 @@ static bool processKeystroke(game_t* game, player_t* player, const char* keyMess
   int newX = currX + dx;
   int newY = currY + dy;
   if (!keepMoving) {
-      movePlayer(game, player, currX, currY, newX, newY);
+    movePlayer(game, player, currX, currY, newX, newY);
   } else {
-      // Continuous movement until blocked
+    // Continuous movement until blocked
       while (movePlayer(game, player, currX, currY, newX, newY)) {
-          currX = newX;
-          currY = newY;
-          newX += dx;
-          newY += dy;
+        currX = newX;
+        currY = newY;
+        newX += dx;
+        newY += dy;
       }
   }
   return true;
