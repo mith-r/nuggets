@@ -90,7 +90,7 @@ int main (int argc, char* argv[]) {
   char* seed = NULL;
 
   //initialize the log
-  log_init(NULL);  
+  log_init(stderr);  
 
   parseArgs(argc, argv, &mapFile, &seed);
  
