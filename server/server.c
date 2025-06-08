@@ -124,6 +124,8 @@ int main (int argc, char* argv[]) {
     free(seed);
   }
 
+  message_done();
+
   log_done();
   game_delete(game);
   return 0;
