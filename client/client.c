@@ -315,47 +315,6 @@ static void handleResize(int k){
     refresh();
 }
 
-
-/************ showDisplay ************/
-/* Renders the displayMessage, map, and player cursor to the screen */
-// static void showDisplay(void){
-//     clear();
-//     mvprintw(0, 0, "%s", displayMessage);
-//     int wordlen = strlen(displayMessage);
-
-//     if (addExtra) {
-//         mvprintw(0, wordlen, "%s", addedMessage);
-//         wordlen += strlen(addedMessage); // update total length on the line
-//     }
-
-//     while (wordlen < ncols) {
-//         mvaddch(0, wordlen, ' ');  // place a space at position (0, len)
-//         wordlen++;
-//     }
-
-//     mvprintw(1, 0, "%s", map);
-
-//     if(!isSpectator){
-//         int found = 0;
-//         for (int row = 0; row < nrows; row++) {
-//             for (int col = 0; col < ncols; col++) {
-//                 char ch = mvinch(row, col); // read the character at (row, col)
-//                 if (ch == '@') {
-//                     move(row, col); // move cursor to player's position
-//                     found = 1;
-//                     break; // exit inner loop
-//                 }
-//             }
-//             if (found) {
-//                 break; // exit outer loop
-//             }
-//         }    
-//     } else{
-//         move(0,0);
-//     }
-//     refresh();
-// }
-
 /************ showDisplay ************/
 /* Renders the displayMessage, map, and player cursor to the screen */
 static void showDisplay(void)
