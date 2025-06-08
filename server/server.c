@@ -86,7 +86,8 @@ int main (int argc, char* argv[]) {
   char* mapFile;
   char* seed = NULL;
 
-  log_init(stderr);  //initialize the log
+  //initialize the log
+  log_init(stderr);  
 
   parseArgs(argc, argv, &mapFile, &seed);
  
@@ -334,7 +335,7 @@ bool processMessage(void* arg, addr_t clientAddress, const char* message) {
 
     //if sender is a player, handle movement key
     else {
-      log_s("Message: %s\n", key);
+      
       //find player by their address
       player_t* player = findPlayerByAddress(game, clientAddress);
 
@@ -358,22 +359,17 @@ bool processMessage(void* arg, addr_t clientAddress, const char* message) {
                 game->goldRemaining,
                 clientAddress);
         sendDisplayMessage(game, clientAddress);
-      //   processKeystroke(game, player, key);  //process the player's keystrokes/movement
-
-      //  // player = findPlayerByAddress(game, clientAddress);
-      //   //if (player == NULL) {
-      //     //return false;
-      //   //}
-
-      //   sendGoldMessage(player->justCollected, player->purse, game->goldRemaining, clientAddress);
-      //   sendDisplayMessage(game, clientAddress);
-
-      //   //update the display for current spectator if there is any
-      //   if (!message_eqAddr(game->spectator, message_noAddr())) {
-      //     game_spectate(game, game->spectator);
-
-        
         }
+
+        for (int i = 0; i < MaxPlayers; i ++) {
+          player_t* other = game->player_array[i];
+          if (other != NULL && other != player) {
+            sendGoldMessage(0, other->purse, game->goldRemaining, other->port);
+            sendDisplayMessage(game, other->port);
+
+          }
+        }
+      
     }
   }
 
@@ -383,16 +379,13 @@ bool processMessage(void* arg, addr_t clientAddress, const char* message) {
     game_spectate(game, clientAddress);
   }
 
-  if (game->totalPlayers == 0 && message_eqAddr(game->spectator, message_noAddr())) {
-    return true;                
-  }
 
-  //handle end of game conditions
-  if (game->goldRemaining == 0 || (game->quitCount == game->totalPlayers && game->quitCount > 0)) {
-    return true; //game is over
-  }
-  else {
-    return false;  //continue game loop
+
+if (game->goldRemaining == 0 || (game->totalPlayers == 0 
+  && message_eqAddr(game->spectator, message_noAddr()))) {
+    return true;
+  } else {
+    return false;
   }
 }
 
@@ -747,7 +740,6 @@ char* displayGame(game_t* game, addr_t fromClient) {
     // add newline after each row
     strcat(display, "\n");
 }
-  printf("RAW DISPLAY:\n%s\n", display);
   return display;
 }
 
@@ -812,16 +804,6 @@ static bool movePlayer(game_t* game, player_t* player, int currX, int currY, int
             // Update visibility for the current player
             mapUpdate(localGrid, newX, newY);
 
-            // Clear the player's letter from points that are no longer visible
-            for (int row = 0; row < grid_getNumRows(fullGrid); row++) {
-                for (int col = 0; col < grid_getNumCols(fullGrid); col++) {
-                    point_t* globalPoint = grid_get(fullGrid, row, col);
-                    if (point_getPlayer(globalPoint) == player->letter && !point_getVisibility(grid_get(localGrid, row, col))) {
-                        point_setPlayer(globalPoint, ' ');  // Clear the player letter
-                    }
-                }
-            }
-
             // Update visibility for other players
             for (int i = 0; i < game->totalPlayers; i++) {
                 player_t* other = game->player_array[i];
@@ -864,15 +846,6 @@ static bool movePlayer(game_t* game, player_t* player, int currX, int currY, int
         // Update visibility for the current player
         mapUpdate(localGrid, newX, newY);
 
-        // Clear the player's letter from points that are no longer visible
-        for (int row = 0; row < grid_getNumRows(fullGrid); row++) {
-            for (int col = 0; col < grid_getNumCols(fullGrid); col++) {
-                point_t* globalPoint = grid_get(fullGrid, row, col);
-                if (point_getPlayer(globalPoint) == player->letter && !point_getVisibility(grid_get(localGrid, row, col))) {
-                    point_setPlayer(globalPoint, ' ');  // Clear the player letter
-                }
-            }
-        }
 
         // Update visibility for other players
         for (int i = 0; i < game->totalPlayers; i++) {
@@ -897,23 +870,23 @@ static bool processKeystroke(game_t* game, player_t* player, const char* keyMess
   }
   char key = keyMessage[0];
 
+
   // --- QUIT ---
   if (key == 'Q' || key == 'q') {
       // Notify this client to exit
       message_send(player->port, "QUIT player");
 
-      // Remove them from the game
+      //Count the quit and remove the player
+      game->quitCount++;
       player_delete(player, game);
 
-      // Check if the game is over
-      if (game->goldRemaining == 0 || (game->quitCount == game->totalPlayers && game->quitCount > 0)) {
-          return true; // Game is over
+      //Determine if the game should end
+      if (game->goldRemaining == 0 || (game->totalPlayers == 0 && message_eqAddr(game->spectator, message_noAddr()))) {
+          return true;
       }
-
-      // Otherwise, update quitCount and keep server running
-      game->quitCount++;
-      return false;
+    return false;
   }
+
 
   // --- MOVEMENT ---
   int currX = player->x;
@@ -925,14 +898,14 @@ static bool processKeystroke(game_t* game, player_t* player, const char* keyMess
   int newX = currX + dx;
   int newY = currY + dy;
   if (!keepMoving) {
-      movePlayer(game, player, currX, currY, newX, newY);
+    movePlayer(game, player, currX, currY, newX, newY);
   } else {
-      // Continuous movement until blocked
+    // Continuous movement until blocked
       while (movePlayer(game, player, currX, currY, newX, newY)) {
-          currX = newX;
-          currY = newY;
-          newX += dx;
-          newY += dy;
+        currX = newX;
+        currY = newY;
+        newX += dx;
+        newY += dy;
       }
   }
   return true;
@@ -1037,9 +1010,6 @@ static void game_spectate(game_t* game, addr_t clientAddress) {
   //Sending DISPLAY message
   char* display_message = displayGame(game, clientAddress);
   message_send(clientAddress, display_message);
-  
-  log_v(display_message); //logs the display message
-
   
   //freeing memory
   free(gold_message);
