@@ -350,23 +350,18 @@ static void showDisplay(void)
     mvprintw(1, 0, "%s", (map && map[0] != '\0') ? map : "");
 
     /* Cursor: highlight player ‘@’ for players, (0,0) for spectators */
-    if (!isSpectator) {
-        bool found = false;
-        for (int row = 0; row < nrows && !found; row++) {
-            for (int col = 0; col < ncols; col++) {
-                int ch = mvinch(row, col) & A_CHARTEXT;   /* strip attributes */
-                if (ch == '@') {
-                    move(row, col);
-                    found = true;
-                    break;
-                }
-            }
-        }
-        if (!found) {
-            move(0, 0);          /* fallback if ‘@’ not yet drawn   */
+    if (isSpectator && map != NULL) {
+        char* at = strchr(map, '@');
+        if (at != NULL) {
+            size_t index = at - map;
+            int row = index /(ncols + 1);
+            int col = index % (ncols + 1);
+            move (row + 1, col);
+        } else {
+            move (0,0);
         }
     } else {
-        move(0, 0);
+        move(0,0);
     }
 
     refresh();
