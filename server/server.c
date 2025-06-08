@@ -602,7 +602,7 @@ bool assignRandomSpot(player_t* player, game_t* game) {
     return false;
   }
   
-  log_v("Player was sucessfully assigned a random spot");
+  log_v("Player was successfully assigned a random spot");
   return true;  //true if randomly assigned a position for player
 }
 
@@ -646,111 +646,99 @@ player_t* findPlayerByLetter(game_t* game, char playerLetter) {
   return NULL;  //return NULL if player could not be found
 }
 
-//display the game for client (local view for player, full view for spectator)
+// display the game for client (local view for player, full view for spectator)
 char* displayGame(game_t* game, addr_t fromClient) {
-
   grid_t* localGrid = NULL;
-  grid_t* fullGrid = game->fullMap;
+  grid_t* fullGrid  = game->fullMap;
   
-  int numRows = grid_getNumRows(fullGrid);
-  int numCols = grid_getNumCols(fullGrid);
-  int totalSpaces = (numRows*numCols*10);
+  int numRows    = grid_getNumRows(fullGrid);
+  int numCols    = grid_getNumCols(fullGrid);
+  int totalSpaces = numRows * numCols * 10;
 
   bool isSpectator = false;
-  
-  //find the matching player based on address of client
   player_t* player = findPlayerByAddress(game, fromClient);
-
-  //if address matched with player
   if (player != NULL) {
-    localGrid = player->grid;
+      localGrid = player->grid;
+  } else {
+      isSpectator = true;
   }
 
-  //if didn't match with a player then client is a spectator
-  else {
-    isSpectator = true;
+  char* display = malloc(totalSpaces * 10);
+  if (!display) {
+      log_v("Could not malloc string display to display game info");
+      return NULL;
   }
-
-  
-  //string display will represent/display the entire game at that current moment
-  char* display = malloc((totalSpaces*10));
-
-  //check if memory was allocated
-  if (display == NULL) {
-    log_v("Could not malloc string display to display game info");
-    return NULL;
-  }
-  
   strcpy(display, "DISPLAY\n");
 
-  //loop through map and form the game display/screen
   for (int i = 0; i < numRows; i++) {
-    for (int j = 0; j < numCols; j++) {
+      for (int j = 0; j < numCols; j++) {
+          point_t* globalPoint = grid_get(fullGrid, i, j);
+          char mapSymbol = ' ';
 
-        point_t* globalPoint = grid_get(fullGrid, i, j);  //get global point on fullMap
-        char mapSymbol = ' ';  //mapSymbol (char) on the map
+          if (!isSpectator) {
+              // ——— player’s own view ———
+              point_t* localPoint   = grid_get(localGrid, i, j);
+              char     playerLetter = point_getPlayer(globalPoint);
 
-       if (!isSpectator) {
-    point_t* localPoint = grid_get(localGrid, i, j);
-    char playerLetter = point_getPlayer(globalPoint);
+              if (player->x == i && player->y == j) {
+                  mapSymbol = '@';
+              }
+              else if (point_getVisibility(localPoint)) {
+                  if (playerLetter != ' ') {
+                      mapSymbol = playerLetter;
+                  }
+                  else if (point_getNuggets(globalPoint) > 0 && !localPoint->visibleGold) {
+                      mapSymbol = '*';
+                  }
+                  else {
+                      mapSymbol = pointValToChar(point_getVal(localPoint));
+                  }
+              }
+              else {
+                  mapSymbol = ' ';
+              }
+          }
+          else {
+              // ——— spectator’s view ———
+              char pLetter = point_getPlayer(globalPoint);
 
-    // Always display self as '@'
-    if (player->x == i && player->y == j) {
-        mapSymbol = '@';
-    }
+              if (pLetter == ' ') {
+                  if (point_getNuggets(globalPoint) > 0) {
+                      mapSymbol = '*';
+                  }
+                  else {
+                      mapSymbol = pointValToChar(point_getVal(globalPoint));
+                  }
+              }
+              else {
+                  bool inSight = false;
+                  for (int p = 0; p < game->totalPlayers && !inSight; p++) {
+                      player_t* other = game->player_array[p];
+                      if (other && other->letter != pLetter) {
+                          point_t* view = grid_get(other->grid, i, j);
+                          if (point_getVisibility(view)) {
+                              inSight = true;
+                          }
+                      }
+                  }
+                  if (inSight) {
+                      mapSymbol = pLetter;
+                  }
+                  else if (point_getNuggets(globalPoint) > 0) {
+                      mapSymbol = '*';
+                  }
+                  else {
+                      mapSymbol = pointValToChar(point_getVal(globalPoint));
+                  }
+              }
+          }
 
-    // Check if this point is visible
-    else if (point_getVisibility(localPoint)) {
+          char tmp[2] = { mapSymbol, '\0' };
+          strcat(display, tmp);
+      }
+      strcat(display, "\n");
+  }
 
-        // If another player is at this point
-        if (playerLetter != ' ') {
-            mapSymbol = playerLetter;
-        }
-
-        // If no player is here, check for gold or terrain
-        else if (point_getNuggets(globalPoint) > 0 && !localPoint->visibleGold) {
-            mapSymbol = '*';
-        } else {
-            mapSymbol = pointValToChar(point_getVal(localPoint));
-        }
-    }
-
-    // If point not visible, show blank space
-    else {
-        mapSymbol = ' ';
-    }
-}
-
-
-        // else client is a SPECTATOR
-        else {
-            char pLetter = point_getPlayer(globalPoint); //getting any player at this point
-
-            //if no player at this location
-            if (pLetter == ' ') {
-                //if gold is present, display '*'
-                if (point_getNuggets(globalPoint) > 0) {
-                    mapSymbol = '*';
-                }
-                //else no gold is present, display terrain
-                else {
-                    mapSymbol = pointValToChar(point_getVal(globalPoint));
-                }
-            }
-
-            //else a player exists at that point, display their playerLetter
-            else {
-                mapSymbol = pLetter;
-            }
-        }
-        // concatenate to the display string
-        char tmp[2] = { mapSymbol, '\0' };
-        strcat(display, tmp);
-    }
-
-    // add newline after each row
-    strcat(display, "\n");
-}
   return display;
 }
 
