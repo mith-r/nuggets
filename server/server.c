@@ -73,6 +73,7 @@ static void sendGridMessage(game_t* game, addr_t to);
 static void sendGoldMessage(int goldCollected, int purse, int goldRemaining, addr_t to);
 static void sendDisplayMessage(game_t* game, addr_t to);
 bool processMessage(void* arg, addr_t clientAddress, const char* message);
+static void sendHearAlerts(game_t* game, player_t* mover);
 static void game_spectate(game_t* game, addr_t clientAddress);
 static void game_end(game_t* game);
 static void player_delete(player_t* player, game_t* game);
@@ -460,6 +461,25 @@ static void sendGoldMessage(int goldCollected, int purse, int goldRemaining, add
 }
 
 /*
+ * Send alert messages to players near the mover
+ */
+static void sendHearAlerts(game_t* game, player_t* mover) {
+  if (game == NULL || mover == NULL) {
+    return;
+  }
+  for (int i = 0; i < game->totalPlayers; i++) {
+    player_t* other = game->player_array[i];
+    if (other != NULL && other != mover) {
+      int dx = abs(other->x - mover->x);
+      int dy = abs(other->y - mover->y);
+      if (dx <= 1 && dy <= 1) {
+        message_send(other->port, "ALERT You hear someone coming.");
+      }
+    }
+  }
+}
+
+/*
  * Helper function for processMessage that sends displayMessage
  */
 static void sendDisplayMessage(game_t* game, addr_t to) {
@@ -799,75 +819,85 @@ static bool movePlayer(game_t* game, player_t* player, int currX, int currY, int
 
         // If there exists another player at that point
         if (otherPlayer != NULL) {
-            // Update other player's position
-            otherPlayer->x = currX;
-            otherPlayer->y = currY;
-            point_setPlayer(oldGlobalPoint, targetPlayerLetter);
+          // steal all gold from the other player
+          int stolen = otherPlayer->purse;
+          if (stolen > 0) {
+              player->purse += stolen;
+              player->justCollected += stolen;
+              otherPlayer->purse = 0;
+          }
+          otherPlayer->justCollected = 0;
 
-            // Update current player's position
-            player->x = newX;
-            player->y = newY;
-            point_setPlayer(newGlobalPoint, player->letter);
 
-            // Update map
-            point_setPlayer(newLocalPoint, player->letter);
-            point_setPlayer(oldLocalPoint, ' ');
+          // Update other player's position
+          otherPlayer->x = currX;
+          otherPlayer->y = currY;
+          point_setPlayer(oldGlobalPoint, targetPlayerLetter);
 
-            // Update visibility for the current player
-            mapUpdate(localGrid, newX, newY);
+          // Update current player's position
+          player->x = newX;
+          player->y = newY;
+          point_setPlayer(newGlobalPoint, player->letter);
 
-            // Update visibility for other players
-            for (int i = 0; i < game->totalPlayers; i++) {
-                player_t* other = game->player_array[i];
-                if (other != NULL && other != player) {
-                    mapUpdate(other->grid, other->x, other->y);
-                }
+          // Update map
+          point_setPlayer(newLocalPoint, player->letter);
+          point_setPlayer(oldLocalPoint, ' ');
+
+          // Update visibility for the current player
+          mapUpdate(localGrid, newX, newY);
+
+          // Update visibility for other players
+          for (int i = 0; i < game->totalPlayers; i++) {
+            player_t* other = game->player_array[i];
+            if (other != NULL && other != player) {
+              mapUpdate(other->grid, other->x, other->y);
             }
-
-            return true;
+          }
+          sendHearAlerts(game, player);
+          return true;
         }
     }
 
     // If point is empty, move the player
     if (pointVal == 1 || pointVal == 3) {
-        player->x = newX;
-        player->y = newY;
-        point_setPlayer(newLocalPoint, player->letter);
-        point_setPlayer(newGlobalPoint, player->letter);
+      player->x = newX;
+      player->y = newY;
+      point_setPlayer(newLocalPoint, player->letter);
+      point_setPlayer(newGlobalPoint, player->letter);
 
-        // Check for and collect gold
-        int numGold = point_getNuggets(newGlobalPoint);
+      // Check for and collect gold
+      int numGold = point_getNuggets(newGlobalPoint);
 
-        // If gold, player collects 
-        if (numGold > 0) {
-            // Update player's purse and justCollected gold
-            player->purse += numGold;
-            player->justCollected = numGold;
+      // If gold, player collects 
+      if (numGold > 0) {
+        // Update player's purse and justCollected gold
+        player->purse += numGold;
+        player->justCollected = numGold;
 
-            // Update game's goldCollected and goldRemaining variables
-            game->totalGoldCollected += numGold;
-            game->goldRemaining = GoldTotal - game->totalGoldCollected;
+        // Update game's goldCollected and goldRemaining variables
+        game->totalGoldCollected += numGold;
+        game->goldRemaining = GoldTotal - game->totalGoldCollected;
 
-            point_setNuggets(newGlobalPoint, 0);
+        point_setNuggets(newGlobalPoint, 0);
+      }
+
+      // Clear old positions that had gold
+      point_setPlayer(oldLocalPoint, ' ');
+      point_setPlayer(oldGlobalPoint, ' ');
+
+      // Update visibility for the current player
+      mapUpdate(localGrid, newX, newY);
+
+
+      // Update visibility for other players
+      for (int i = 0; i < game->totalPlayers; i++) {
+        player_t* other = game->player_array[i];
+        if (other != NULL && other != player) {
+          mapUpdate(other->grid, other->x, other->y);
         }
-
-        // Clear old positions that had gold
-        point_setPlayer(oldLocalPoint, ' ');
-        point_setPlayer(oldGlobalPoint, ' ');
-
-        // Update visibility for the current player
-        mapUpdate(localGrid, newX, newY);
-
-
-        // Update visibility for other players
-        for (int i = 0; i < game->totalPlayers; i++) {
-            player_t* other = game->player_array[i];
-            if (other != NULL && other != player) {
-                mapUpdate(other->grid, other->x, other->y);
-            }
-        }
-
-        return true;
+      }
+      sendHearAlerts(game, player);
+      return true;
     }
 
     //Invalid move
