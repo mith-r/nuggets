@@ -70,7 +70,6 @@ static void game_end(game_t* game);
 static void player_delete(player_t* player, game_t* game);
 static void game_delete(game_t* game);
 static player_t *findPlayerByName(game_t *game, const char *name);
-static void showServerMap(game_t* game);
 
 
 //global constants
@@ -121,7 +120,6 @@ int main (int argc, char* argv[]) {
   game_delete(game);
   return 0;
 }
-
 
 //validates arguments
 void parseArgs(const int argc, char* argv[], char** mapFile, char** seed) {
@@ -186,7 +184,6 @@ void parseArgs(const int argc, char* argv[], char** mapFile, char** seed) {
     }
 }
 
-
 /*
  * validates the provided seed
  */
@@ -215,7 +212,6 @@ int validateSeed(char* seed) {
 
   return -1; //error
 }
-
 
 
 //creates a new game struct
@@ -345,7 +341,7 @@ bool processMessage(void* arg, addr_t clientAddress, const char* message) {
 
     //if sender is a player, handle movement key
     else {
-      log_s("Message: %s\n", key);
+      
       //find player by their address
       player_t* player = findPlayerByAddress(game, clientAddress);
 
@@ -394,14 +390,11 @@ bool processMessage(void* arg, addr_t clientAddress, const char* message) {
 
 if (game->goldRemaining == 0 || (game->totalPlayers == 0 
   && message_eqAddr(game->spectator, message_noAddr()))) {
-    showServerMap(game);
     return true;
   } else {
-    showServerMap(game);
     return false;
   }
 }
-
 
 /*
  * Helper function for processMessage that sends gridMessage
@@ -761,23 +754,6 @@ char* displayGame(game_t* game, addr_t fromClient) {
   return display;
 }
 
-/* Print the spectator's view to the server console.*/
-static void showServerMap(game_t* game)
-{
-  char* disp = displayGame(game, message_noAddr());
-  if (disp == NULL) {
-    return;
-  }
-  char* start = strchr(disp, '\n');
-  if (start != NULL) {
-    printf("%s\n", start +1);
-  } else {
-    printf("%s\n", disp);
-  }
-  free(disp);
-}
-
-
 /*
  * Given a value of a point on the map append its correct char to the display string
  * that will be used to display the game
@@ -1049,9 +1025,6 @@ static void game_spectate(game_t* game, addr_t clientAddress) {
   //Sending DISPLAY message
   char* display_message = displayGame(game, clientAddress);
   message_send(clientAddress, display_message);
-  
-  log_v(display_message); //logs the display message
-
   
   //freeing memory
   free(gold_message);
