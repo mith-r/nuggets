@@ -160,7 +160,6 @@ static void serverComs(const char* serverHost, const char* serverPort){
     message_done(); //clean up
 }
 
-//kind of redundant just has extra checks for null message/ port bur ultimately still calls message_send
 /************ messageServer ************/
 /* Sends a message to the server if the address is valid */
 void messageServer(addr_t addr, char* message){
@@ -316,81 +315,41 @@ static void handleResize(int k){
     refresh();
 }
 
-
 /************ showDisplay ************/
 /* Renders the displayMessage, map, and player cursor to the screen */
-// static void showDisplay(void){
-//     clear();
-//     mvprintw(0, 0, "%s", displayMessage);
-//     int wordlen = strlen(displayMessage);
-
-//     if (addExtra) {
-//         mvprintw(0, wordlen, "%s", addedMessage);
-//         wordlen += strlen(addedMessage); // update total length on the line
-//     }
-
-//     while (wordlen < ncols) {
-//         mvaddch(0, wordlen, ' ');  // place a space at position (0, len)
-//         wordlen++;
-//     }
-
-//     mvprintw(1, 0, "%s", map);
-
-//     if(!isSpectator){
-//         int found = 0;
-//         for (int row = 0; row < nrows; row++) {
-//             for (int col = 0; col < ncols; col++) {
-//                 char ch = mvinch(row, col); // read the character at (row, col)
-//                 if (ch == '@') {
-//                     move(row, col); // move cursor to player's position
-//                     found = 1;
-//                     break; // exit inner loop
-//                 }
-//             }
-//             if (found) {
-//                 break; // exit outer loop
-//             }
-//         }    
-//     } else{
-//         move(0,0);
-//     }
-//     refresh();
-// }
-
 static void showDisplay(void)
 {
     clear();
 
-    /* Ensure we always print valid, NUL-terminated strings */
+    //Ensure print valid strings 
     const char *line1 = (displayMessage && displayMessage[0] != '\0')
                         ? displayMessage : "";
     const char *extra = (addedMessage   && addedMessage[0] != '\0')
                         ? addedMessage   : "";
 
-    /* First status line */
+    //First status line
     mvprintw(0, 0, "%s", line1);
     int wordlen = strlen(line1);
 
-    /* Optional “extra” chunk (GOLD / ERROR text) */
     if (addExtra && extra[0] != '\0') {
         mvprintw(0, wordlen, "%s", extra);
         wordlen += strlen(extra);
     }
 
-    /* Pad the rest of the first row so old text is cleared */
+    //old text is cleared
     for (int col = wordlen; col < ncols; col++) {
         mvaddch(0, col, ' ');
     }
 
-    /* Game map (may be empty before first DISPLAY) */
+    //game map
     mvprintw(1, 0, "%s", (map && map[0] != '\0') ? map : "");
 
-    /* Cursor: highlight player ‘@’ for players, (0,0) for spectators */
+    //highlight player ‘@’ for players, (0,0) for spectators
     if (!isSpectator) {
         bool found = false;
         for (int row = 0; row < nrows && !found; row++) {
             for (int col = 0; col < ncols; col++) {
-                int ch = mvinch(row, col) & A_CHARTEXT;   /* strip attributes */
+                int ch = mvinch(row, col) & A_CHARTEXT;   
                 if (ch == '@') {
                     move(row, col);
                     found = true;
@@ -399,7 +358,7 @@ static void showDisplay(void)
             }
         }
         if (!found) {
-            move(0, 0);          /* fallback if ‘@’ not yet drawn   */
+            move(0, 0);          
         }
     } else {
         move(0, 0);
@@ -409,6 +368,7 @@ static void showDisplay(void)
 }
 
 /************ parseGold ************/
+/* Parses a GOLD message and updates the game display for the player or spectator */
 static void parseGold(const char* input)
 {
     //Parse messages and ensure success
@@ -436,6 +396,7 @@ static void parseGold(const char* input)
 }
 
 /************ parseMap ************/
+/* Parses a map message to extract the number of rows and columns */
 static void parseMap(const char* input){
 
     if (sscanf(input+5, "%d %d", &nrows, &ncols) != 2) {
