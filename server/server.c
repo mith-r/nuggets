@@ -802,37 +802,44 @@ static char pointValToChar(int pointVal) {
  * Moves a player on the map
  */
 static bool movePlayer(game_t* game, player_t* player, int currX, int currY, int newX, int newY) {
-    grid_t* localGrid = player->grid;  
-    grid_t* fullGrid = game->fullMap; 
+  grid_t* localGrid = player->grid;
+  grid_t* fullGrid = game->fullMap;
 
-    point_t* oldLocalPoint = grid_get(localGrid, currX, currY);
-    point_t* newLocalPoint = grid_get(localGrid, newX, newY);
-    point_t* oldGlobalPoint = grid_get(fullGrid, currX, currY);
-    point_t* newGlobalPoint = grid_get(fullGrid, newX, newY);
+  point_t* oldLocalPoint  = grid_get(localGrid, currX, currY);
+  point_t* newLocalPoint  = grid_get(localGrid, newX, newY);
+  point_t* oldGlobalPoint = grid_get(fullGrid,  currX, currY);
+  point_t* newGlobalPoint = grid_get(fullGrid,  newX,  newY);
 
-    int pointVal = point_getVal(newLocalPoint);
-    char targetPlayerLetter = point_getPlayer(newGlobalPoint);
+  int  pointVal             = point_getVal(newLocalPoint);
+  char targetPlayerLetter   = point_getPlayer(newGlobalPoint);
 
-    // swap players if another player is on the destination point 
-    if (targetPlayerLetter != ' ') {
-        player_t* otherPlayer = findPlayerByLetter(game, targetPlayerLetter);
+  // swap players if another player is on the destination point
+  if (targetPlayerLetter != ' ') {
+      player_t* otherPlayer = findPlayerByLetter(game, targetPlayerLetter);
 
-        // If there exists another player at that point
-        if (otherPlayer != NULL) {
+      // If there exists another player at that point
+      if (otherPlayer != NULL) {
           // steal all gold from the other player
           int stolen = otherPlayer->purse;
           if (stolen > 0) {
-              player->purse += stolen;
+              player->purse         += stolen;
               player->justCollected += stolen;
-              otherPlayer->purse = 0;
+              otherPlayer->purse     = 0;
           }
           otherPlayer->justCollected = 0;
 
+          int otherOldX = otherPlayer->x;
+          int otherOldY = otherPlayer->y;
 
           // Update other player's position
           otherPlayer->x = currX;
           otherPlayer->y = currY;
           point_setPlayer(oldGlobalPoint, targetPlayerLetter);
+
+          point_t* otherOldLocal = grid_get(otherPlayer->grid, otherOldX, otherOldY);
+          point_t* otherNewLocal = grid_get(otherPlayer->grid, currX, currY);
+          point_setPlayer(otherOldLocal, ' ');
+          point_setPlayer(otherNewLocal, otherPlayer->letter);
 
           // Update current player's position
           player->x = newX;
@@ -845,21 +852,22 @@ static bool movePlayer(game_t* game, player_t* player, int currX, int currY, int
 
           // Update visibility for the current player
           mapUpdate(localGrid, newX, newY);
+          mapUpdate(otherPlayer->grid, otherPlayer->x, otherPlayer->y);
 
           // Update visibility for other players
           for (int i = 0; i < game->totalPlayers; i++) {
-            player_t* other = game->player_array[i];
-            if (other != NULL && other != player) {
-              mapUpdate(other->grid, other->x, other->y);
-            }
+              player_t* other = game->player_array[i];
+              if (other != NULL && other != player && other != otherPlayer) {
+                  mapUpdate(other->grid, other->x, other->y);
+              }
           }
           sendHearAlerts(game, player);
           return true;
-        }
-    }
+      }
+  }
 
-    // If point is empty, move the player
-    if (pointVal == 1 || pointVal == 3) {
+  // If point is empty, move the player
+  if (pointVal == 1 || pointVal == 3) {
       player->x = newX;
       player->y = newY;
       point_setPlayer(newLocalPoint, player->letter);
@@ -868,41 +876,40 @@ static bool movePlayer(game_t* game, player_t* player, int currX, int currY, int
       // Check for and collect gold
       int numGold = point_getNuggets(newGlobalPoint);
 
-      // If gold, player collects 
+      // If gold, player collects
       if (numGold > 0) {
-        // Update player's purse and justCollected gold
-        player->purse += numGold;
-        player->justCollected = numGold;
+          // Update player's purse and justCollected gold
+          player->purse         += numGold;
+          player->justCollected  = numGold;
 
-        // Update game's goldCollected and goldRemaining variables
-        game->totalGoldCollected += numGold;
-        game->goldRemaining = GoldTotal - game->totalGoldCollected;
+          // Update game's goldCollected and goldRemaining
+          game->totalGoldCollected += numGold;
+          game->goldRemaining       = GoldTotal - game->totalGoldCollected;
 
-        point_setNuggets(newGlobalPoint, 0);
+          point_setNuggets(newGlobalPoint, 0);
       }
 
       // Clear old positions that had gold
-      point_setPlayer(oldLocalPoint, ' ');
+      point_setPlayer(oldLocalPoint,  ' ');
       point_setPlayer(oldGlobalPoint, ' ');
 
       // Update visibility for the current player
       mapUpdate(localGrid, newX, newY);
 
-
       // Update visibility for other players
       for (int i = 0; i < game->totalPlayers; i++) {
-        player_t* other = game->player_array[i];
-        if (other != NULL && other != player) {
-          mapUpdate(other->grid, other->x, other->y);
-        }
+          player_t* other = game->player_array[i];
+          if (other != NULL && other != player) {
+              mapUpdate(other->grid, other->x, other->y);
+          }
       }
       sendHearAlerts(game, player);
       return true;
-    }
+  }
 
-    //Invalid move
-    mapUpdate(localGrid, player->x, player->y);
-    return false;
+  // Invalid move
+  mapUpdate(localGrid, player->x, player->y);
+  return false;
 }
 
 /* 

@@ -392,9 +392,21 @@ void randomizeGold(grid_t *grid, int minPiles, int maxPiles, int totalGold)
 /*Consistent update of what is visible to the player given their location*/
 void mapUpdate(grid_t *playerGrid, int playerRow, int PlayerColumn)
 {
-    // Get total number of rows and columns in the player's grid
+    // Reset visibility so that previously seen areas disappear when the
+    // player moves. This keeps vision limited to the current location.
     int totalRows = grid_getNumRows(playerGrid);
     int totalCols = grid_getNumCols(playerGrid);
+    for (int r = 0; r < totalRows; r++) {
+        for (int c = 0; c < totalCols; c++) {
+            point_t *p = grid_get(playerGrid, r, c);
+            point_setVisibility(p, false);
+            p->visibleGold = false;
+        }
+    }
+
+    // Get total number of rows and columns in the player's grid
+    totalRows = grid_getNumRows(playerGrid);
+    totalCols = grid_getNumCols(playerGrid);
     point_t *origin = grid_get(playerGrid, playerRow, PlayerColumn);
 
     // If the player is on a passage, reveal it and any adjacent passages
