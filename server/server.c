@@ -28,6 +28,13 @@ typedef struct player {
   addr_t port;   //port player is connected to
 } player_t;
 
+/* keep a brief record of players for game summary */
+typedef struct summary_player {
+  char letter;
+  char* username;
+  int purse;
+} summary_player_t;
+
 /*
  * game struct
  */
@@ -41,6 +48,9 @@ typedef struct game {
   int totalGoldCollected;
   int totalPlayers;
   int quitCount;
+  // records of players who quit (for summary)
+  struct summary_player* summary;
+  int summaryCount;
 } game_t;
 
 /*
@@ -240,7 +250,8 @@ game_t* game_new(char* mapFile) {
   game->mapFile = mapFile;
   game->spectator = message_noAddr();
   game->quitCount = 0;
-  
+  game->summary = calloc(MaxPlayers, sizeof(summary_player_t));
+  game->summaryCount = 0;
   
   //check if map could be opened
   FILE* fp = fopen(mapFile, "r");
@@ -954,7 +965,6 @@ static void moveByKey(char key, int* dx, int* dy, bool *keepMoving) {
 
     //if invalid key
     default:
-      log_v("Invalid input received.\n");
       return;
   }
 }
@@ -1045,7 +1055,14 @@ static void game_end(game_t* game) {
 
   strcat(game_summary, "QUIT GAME OVER:\n");
 
-  //loop through player_array to build summary table
+  // first include players who have already quit
+  for (int i = 0; i < game->summaryCount; i++) {
+    summary_player_t rec = game->summary[i];
+    char row[150];
+    snprintf(row, sizeof(row), "%c\t%d\t%s\n", rec.letter, rec.purse, rec.username);
+    strcat(game_summary, row);
+  }
+
   for (int i = 0; i<game->totalPlayers; i++) {
     player_t* player = game->player_array[i];
 
@@ -1091,7 +1108,15 @@ static void player_delete(player_t* player, game_t* game) {
     return;
   }
 
-  //Remove player from game's player_array
+  // record player stats for final summary
+  if (game->summaryCount < MaxPlayers) {
+    summary_player_t *rec = &game->summary[game->summaryCount++];
+    rec->letter = player->letter;
+    rec->purse = player->purse;
+    rec->username = strdup(player->username);
+  }
+
+  // Remove player from game's player_array while keeping array compact
   int found = -1;
   for (int i = 0; i < game->totalPlayers; i++) {
     if (game->player_array[i] != NULL && game->player_array[i]->letter == player->letter) {
@@ -1100,9 +1125,10 @@ static void player_delete(player_t* player, game_t* game) {
     }
   }
 
+  // Shift remaining players down to fill the gap
   if (found != -1) {
     for (int j = found; j < game->totalPlayers - 1; j++) {
-      game->player_array[j] = game->player_array[j+1];
+      game->player_array[j] = game->player_array[j + 1];
     }
     game->player_array[game->totalPlayers - 1] = NULL;
     game->totalPlayers--;
@@ -1137,5 +1163,11 @@ static void game_delete(game_t* game) {
   //freeing memory
   delete_grid(game->fullMap);
   free(game->player_array);
+
+  for (int i = 0; i < game->summaryCount; i++) {
+    free(game->summary[i].username);
+  }
+  free(game->summary);
+
   free(game);
 }
