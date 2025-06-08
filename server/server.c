@@ -1107,14 +1107,20 @@ static void player_delete(player_t* player, game_t* game) {
   }
 
   //Remove player from game's player_array
-  for (int i = 0; i<game->totalPlayers; i++) {
-
-    //if the player_array exists and player[i]'s letter matches player Letter
-    if(game->player_array[i] != NULL && game->player_array[i]->letter == player->letter) {
-      game->player_array[i] = NULL;  //set pointer to NULL
-      game->totalPlayers--;
+  int found = -1;
+  for (int i = 0; i < game->totalPlayers; i++) {
+    if (game->player_array[i] != NULL && game->player_array[i]->letter == player->letter) {
+      found = i;
       break;
     }
+  }
+
+  if (found != -1) {
+    for (int j = found; j < game->totalPlayers - 1; j++) {
+      game->player_array[j] = game->player_array[j+1];
+    }
+    game->player_array[game->totalPlayers - 1] = NULL;
+    game->totalPlayers--;
   }
 
   //free memory
