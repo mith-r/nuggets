@@ -442,6 +442,14 @@ void mapUpdate(grid_t *playerGrid, int playerRow, int PlayerColumn)
     {
         for (int col = 0; col < totalCols; col++)
         {
+
+            int dRow = row - playerRow;
+            int dCol = col - PlayerColumn;
+            int radius = 3;
+            if ((dRow * dRow + dCol * dCol) > radius * radius)
+            {
+                continue; //skip cells beyond vision radius
+            }
             point_t *current = grid_get(playerGrid, row, col);
 
             // Check current visibility and gold presence
