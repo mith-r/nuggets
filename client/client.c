@@ -283,6 +283,14 @@ static bool handleMessage(void* arg, const addr_t address, const char* input){
         parseGold(input);
         return false;
     }
+    //handle "ALERT"
+    if(strncmp(input, "ALERT", strlen("ALERT"))==0){
+        const char* alertText = input + strlen("ALERT ");
+        strcpy(addedMessage, alertText);
+        addExtra = true;
+        showGold = false;
+        return false;
+    }
     //handle "ERROR"
     if(strncmp(input, "ERROR", strlen("ERROR"))==0){
         if (strlen(input) <= strlen("ERROR")){
