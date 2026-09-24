@@ -24,8 +24,9 @@ Build the project with `make` from the repository root. See the component README
 
 `main` contains the extra-credit submission, with larger changes organized into
 focused commits. `submit-final`, `submit-extracredit`, and the team's development
-branches retain their original history. Original commit IDs, authors, and dates
-remain available on those branches and under `archive/`.
+branches retain their original history. Submission history, authorship, and project dates remain available on those
+branches and under `archive/`. Author emails have been corrected to link to
+`mith-r`.
 
 `archive/pre-reorganization-main` preserves the restored main branch before the
 history was organized. Split changes retain their original commit timestamps.
