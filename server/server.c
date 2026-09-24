@@ -887,17 +887,17 @@ static bool processKeystroke(game_t* game, player_t* player, const char* keyMess
 
   // quit 
   if (key == 'Q' || key == 'q') {
-      // Notify this client to exit
-      message_send(player->port, "QUIT player");
+    // Notify this client to exit
+    message_send(player->port, "QUIT player");
 
-      //Count the quit and remove the player
-      game->quitCount++;
-      player_delete(player, game);
+    //Count the quit and remove the player
+    game->quitCount++;
+    player_delete(player, game);
 
-      //Determine if the game should end
-      if (game->goldRemaining == 0 || (game->totalPlayers == 0 && message_eqAddr(game->spectator, message_noAddr()))) {
-          return true;
-      }
+    //Determine if the game should end
+    if (game->goldRemaining == 0 || (game->totalPlayers == 0 && message_eqAddr(game->spectator, message_noAddr()))) {
+      return true;
+    }
     return false;
   }
 
