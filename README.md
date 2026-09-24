@@ -14,5 +14,17 @@ When all gold nuggets are collected, the game ends and a summary is printed.
 
 Assumptions: Changed certain message functions to log_d to support our display.
 
+## Build
 
+Developed for the Dartmouth CS50 Linux environment. The client requires ncurses.
+Build the project with `make` from the repository root. See the component READMEs,
+`DESIGN.md`, and `IMPLEMENTATION.md` for the game architecture and usage.
 
+## Restored history
+
+`main` contains the original extra-credit submission. The final submission is
+preserved as `submit-final`, along with the team's original development and
+submission branches. Original commit IDs, authors, and timestamps are unchanged.
+Older local branch tips and recovered stashes are retained under `archive/`.
+`recovered-working-tree` saves a previously uncommitted server formatting change.
+The documentation and recovery commits are dated when this repository was restored.
