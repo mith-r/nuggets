@@ -20,11 +20,14 @@ Developed for the Dartmouth CS50 Linux environment. The client requires ncurses.
 Build the project with `make` from the repository root. See the component READMEs,
 `DESIGN.md`, and `IMPLEMENTATION.md` for the game architecture and usage.
 
-## Restored history
+## History
 
-`main` contains the original extra-credit submission. The final submission is
-preserved as `submit-final`, along with the team's original development and
-submission branches. Original commit IDs, authors, and timestamps are unchanged.
-Older local branch tips and recovered stashes are retained under `archive/`.
-`recovered-working-tree` saves a previously uncommitted server formatting change.
-The documentation and recovery commits are dated when this repository was restored.
+`main` contains the extra-credit submission, with larger changes organized into
+focused commits. `submit-final`, `submit-extracredit`, and the team's development
+branches retain their original history. Original commit IDs, authors, and dates
+remain available on those branches and under `archive/`.
+
+`archive/pre-reorganization-main` preserves the restored main branch before the
+history was organized. Split changes retain their original commit timestamps.
+`recovered-working-tree` saves the uncommitted server formatting change found in
+the original workspace. Documentation and restoration updates are dated when made.
